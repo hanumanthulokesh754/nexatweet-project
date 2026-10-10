@@ -1,0 +1,1843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NexaTweet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#080B14;
+    --bg-2:#0F1420;
+    --card:#151B28;
+    --card-hover:#1B2233;
+    --border:#252D3D;
+    --cyan:#3FD1E0;
+    --cyan-dim:rgba(63,209,224,0.14);
+    --blue:#4C8DFF;
+    --green:#3ECF8E;
+    --green-dim:rgba(62,207,142,0.14);
+    --amber:#F5B94D;
+    --amber-dim:rgba(245,185,77,0.14);
+    --red:#F0555A;
+    --red-dim:rgba(240,85,90,0.14);
+    --text:#F4F6FA;
+    --text-2:#94A3B8;
+    --text-3:#5B6578;
+    --radius:14px;
+    --radius-sm:10px;
+    --mono:'JetBrains Mono', ui-monospace, monospace;
+    --sans:'Inter', -apple-system, sans-serif;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    box-sizing:border-box;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-padding-top:env(safe-area-inset-top,0px);}
+  body{
+    margin:0; font-family:var(--sans); background:var(--bg); color:var(--text);
+    -webkit-font-smoothing:antialiased; height:100%;
+  }
+  html,body{height:100%;}
+  ::selection{background:var(--cyan-dim); color:var(--cyan);}
+  a{color:inherit;}
+  button{font-family:inherit; cursor:pointer;}
+  ::-webkit-scrollbar{width:8px; height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--border); border-radius:8px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+
+  /* ---------- LOGIN ---------- */
+  #login-view{
+    position:fixed; inset:0; display:flex; align-items:flex-start; background:transparent; z-index:50; overflow:auto;
+  }
+  /* WebGL dot-matrix backdrop (sits behind the login layout, removed once signed in) */
+  #login-bg{
+    position:fixed; inset:0; z-index:49; background:var(--bg); overflow:hidden; pointer-events:none;
+  }
+  #login-dots{position:absolute; inset:0; width:100%; height:100%; display:block;}
+  #login-bg .vignette{
+    position:absolute; inset:0;
+    background:
+      radial-gradient(ellipse 55% 65% at 28% 50%, rgba(8,11,20,0.72) 0%, rgba(8,11,20,0) 100%),
+      radial-gradient(ellipse 40% 55% at 82% 50%, rgba(8,11,20,0.5) 0%, rgba(8,11,20,0) 100%),
+      radial-gradient(900px 500px at 12% 15%, rgba(63,209,224,0.10), transparent 60%),
+      radial-gradient(800px 500px at 85% 85%, rgba(124,109,242,0.09), transparent 60%);
+  }
+  .login-left{
+    flex:1; position:relative; display:flex; flex-direction:column; justify-content:center;
+    padding:64px 72px 76px; overflow:hidden; min-width:0; min-height:100%;
+  }
+  .particles{position:absolute; inset:0; z-index:0;}
+  .particles circle{animation:drift 9s ease-in-out infinite;}
+  @keyframes drift{ 0%,100%{ transform:translateY(0); opacity:.5;} 50%{ transform:translateY(-14px); opacity:1;} }
+  .login-left > *{position:relative; z-index:1;}
+  .brand-row{display:flex; align-items:center; gap:10px; margin-bottom:44px;}
+  .bolt{
+    width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg, var(--cyan), var(--blue));
+    display:flex; align-items:center; justify-content:center; color:#04141a; font-weight:800; font-size:18px;
+    box-shadow:0 0 24px rgba(63,209,224,0.35);
+  }
+  .brand-name{font-weight:700; font-size:19px; letter-spacing:-0.02em;}
+  .login-headline{font-size:42px; line-height:1.14; font-weight:700; letter-spacing:-0.02em; max-width:500px; margin:0 0 14px;}
+  .login-headline .accent{color:var(--cyan);}
+  .login-sub{color:var(--text-2); font-size:15px; max-width:440px; line-height:1.6; margin-bottom:30px;}
+  .feature-row{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:38px;}
+  .feature-card{
+    background:rgba(21,27,40,0.55); border:1px solid rgba(255,255,255,0.08); backdrop-filter:blur(14px);
+    border-radius:var(--radius-sm); padding:13px 15px; font-size:13px; color:var(--text-2);
+    display:flex; align-items:center; gap:9px; min-width:160px; box-shadow:0 8px 20px rgba(0,0,0,0.25);
+  }
+  .feature-card .ic{font-size:16px;}
+  .feature-card b{color:var(--text); font-weight:600; display:block; font-size:12.8px;}
+
+  /* AIOps node visualization */
+  .node-viz{position:relative; width:100%; max-width:460px; height:230px; margin-top:4px;}
+  .node-viz svg{width:100%; height:100%; overflow:visible;}
+  .node-line{stroke:rgba(63,209,224,0.28); stroke-width:1.4; fill:none;}
+  .node-dot{filter:drop-shadow(0 0 5px currentColor);}
+  .node-pulse{animation:flowdash 3.2s linear infinite;}
+  @keyframes flowdash{ to{ stroke-dashoffset:-40; } }
+  .node-core-ring{animation:pulse-ring 2.6s ease-out infinite; transform-box:fill-box; transform-origin:center;}
+  @keyframes pulse-ring{ 0%{ opacity:.55; transform:scale(1);} 100%{ opacity:0; transform:scale(1.9);} }
+  .node-label{font-family:var(--sans); font-size:10.5px; fill:var(--text-2); text-anchor:middle;}
+  .node-label.core{fill:var(--text); font-weight:700; font-size:11px;}
+
+  /* 3D glass sphere core */
+  #login-view{perspective:1400px;}
+  .node-viz{transition:transform .25s ease-out; transform-style:preserve-3d;}
+  .core-sphere{transition:filter .4s ease;}
+  .core-sphere.bright{filter:brightness(1.6) saturate(1.3);}
+  .orbit-particle{animation:orbit 7s linear infinite;}
+  .orbit-particle.p2{animation-duration:9.5s; animation-direction:reverse;}
+  @keyframes orbit{ from{ transform:rotate(0deg) translateX(30px) rotate(0deg);} to{ transform:rotate(360deg) translateX(30px) rotate(-360deg);} }
+  .node-pulse.accelerate{animation-duration:0.9s;}
+  .float-metric{font-family:var(--mono); font-size:9.5px; fill:var(--cyan); opacity:0; animation:floatmetric 6s ease-in-out infinite;}
+  .float-metric.m2{animation-delay:2s;} .float-metric.m3{animation-delay:4s;}
+  @keyframes floatmetric{ 0%,85%,100%{opacity:0; transform:translateY(0);} 92%{opacity:1; transform:translateY(-6px);} }
+
+  .login-right{
+    width:460px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    padding:40px 40px 76px; position:relative; min-height:100%;
+  }
+  .login-right::before{
+    content:''; position:absolute; inset:0; background:rgba(8,11,20,0.22); border-left:1px solid rgba(255,255,255,0.06);
+  }
+  .login-card{
+    width:100%; max-width:380px; position:relative; z-index:1; transition:transform .2s ease-out;
+    background:rgba(21,27,40,0.55); border:1px solid rgba(63,209,224,0.18); backdrop-filter:blur(20px);
+    border-radius:22px; padding:30px 32px; box-shadow:0 20px 60px rgba(0,0,0,0.4);
+    animation:cardFloat 5s ease-in-out infinite;
+  }
+  @keyframes cardFloat{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-3px);} }
+  .login-card.shake-card{animation:cardShake .3s ease;}
+  @keyframes cardShake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);} }
+  .nexora-pill{
+    display:inline-flex; align-items:center; gap:6px; font-size:10.5px; font-weight:700; letter-spacing:.03em;
+    color:var(--green); background:var(--green-dim); border:1px solid rgba(62,207,142,0.3); border-radius:20px;
+    padding:5px 11px; margin-bottom:18px;
+  }
+  .login-card h2{font-size:22px; margin:0 0 6px; font-weight:700;}
+  .login-card .lead{color:var(--text-2); font-size:13px; margin:0 0 24px;}
+
+  .field{margin-bottom:18px; position:relative;}
+  .field-label{display:block; font-size:11px; letter-spacing:.04em; color:var(--text-3); margin-bottom:7px; font-weight:600;}
+  .input-shell{
+    display:flex; align-items:center; gap:10px; background:rgba(8,11,20,0.55); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:12px 14px; transition:border-color .18s, box-shadow .18s;
+  }
+  .input-shell .ic{color:var(--text-3); font-size:15px; flex-shrink:0; transition:color .18s;}
+  .input-shell input{flex:1; background:none; border:none; outline:none; color:var(--text); font-size:14px; min-width:0;}
+  .input-shell input::placeholder{color:var(--text-3);}
+  .input-shell.focused{border-color:var(--cyan); box-shadow:0 0 0 3px rgba(63,209,224,0.12);}
+  .input-shell.focused .ic{color:var(--cyan);}
+  .input-shell.invalid{border-color:var(--red); animation:shake .35s ease;}
+  @keyframes shake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-5px);} 75%{transform:translateX(5px);} }
+  .eye-toggle{background:none; border:none; color:var(--text-3); font-size:14px; padding:2px; flex-shrink:0;}
+  .eye-toggle:hover{color:var(--text-2);}
+  .field-msg{font-size:11.5px; margin-top:6px; display:none; align-items:center; gap:5px;}
+  .field-msg.show{display:flex;}
+  .field-msg.err{color:var(--red);}
+  .field-msg.ok{color:var(--green);}
+
+  .row-between{display:flex; align-items:center; justify-content:space-between; font-size:13px; margin:2px 0 22px; color:var(--text-2);}
+  .row-between label{display:flex; align-items:center; gap:7px; cursor:pointer;}
+  .row-between a{color:var(--cyan); text-decoration:none; transition:text-decoration .15s;}
+  .row-between a:hover{text-decoration:underline; text-underline-offset:3px;}
+
+  .btn{
+    width:100%; padding:15px 16px; border-radius:12px; border:none; font-size:14.5px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; gap:8px; transition:transform .16s, box-shadow .2s;
+    height:54px;
+  }
+  .btn:active{transform:scale(0.98);}
+  .btn-primary{
+    background:linear-gradient(135deg, var(--cyan), var(--blue)); color:#04141a; margin-bottom:12px;
+    box-shadow:0 8px 24px rgba(63,209,224,0.25); position:relative; overflow:hidden;
+  }
+  .btn-primary:hover{transform:translateY(-2px); box-shadow:0 12px 32px rgba(63,209,224,0.38);}
+  .btn-primary .arrow{transition:transform .18s;}
+  .btn-primary:hover .arrow{transform:translateX(3px);}
+  .btn-primary.loading, .btn-primary.success{pointer-events:none;}
+  .btn-primary.success{background:linear-gradient(135deg, var(--green), var(--cyan));}
+  .dot-loader{display:inline-flex; gap:4px;}
+  .dot-loader span{width:5px; height:5px; border-radius:50%; background:#04141a; animation:dotpulse 1.1s ease-in-out infinite;}
+  .dot-loader span:nth-child(2){animation-delay:.15s;} .dot-loader span:nth-child(3){animation-delay:.3s;}
+  @keyframes dotpulse{ 0%,80%,100%{opacity:.25; transform:scale(.7);} 40%{opacity:1; transform:scale(1);} }
+  .btn-secondary{background:transparent; border:1px solid var(--border); color:var(--text);}
+  .btn-glass{
+    background:rgba(255,255,255,0.04); border:1px solid rgba(63,209,224,0.3); color:var(--cyan);
+    backdrop-filter:blur(8px);
+  }
+  .btn-glass:hover{background:rgba(63,209,224,0.08); transform:translateY(-1px);}
+  .or-divider{display:flex; align-items:center; gap:12px; margin:16px 0; color:var(--text-3); font-size:11px; font-weight:600;}
+  .or-divider::before, .or-divider::after{content:''; flex:1; height:1px; background:var(--border);}
+  .register-line{text-align:center; margin-top:20px; font-size:12.8px; color:var(--text-2);}
+  .register-line a{color:var(--cyan); font-weight:600; text-decoration:none; cursor:pointer;}
+  .register-line a:hover{text-decoration:underline; text-underline-offset:3px;}
+  .error-banner{
+    display:none; align-items:center; gap:8px; background:var(--red-dim); border:1px solid rgba(240,85,90,0.35);
+    color:var(--red); font-size:12.5px; padding:10px 13px; border-radius:var(--radius-sm); margin-bottom:16px;
+  }
+  .error-banner.show{display:flex;}
+  .demo-link{display:none;}
+
+  .login-status-bar{
+    position:fixed; left:0; right:0; bottom:0; z-index:51; height:38px; display:flex; align-items:center; justify-content:center;
+    gap:22px; background:rgba(8,11,20,0.7); backdrop-filter:blur(10px); border-top:1px solid rgba(255,255,255,0.06);
+    font-family:var(--mono); font-size:11px; color:var(--text-2);
+  }
+  .login-status-bar .dot{width:6px; height:6px;}
+  .login-status-bar .strong{color:var(--green); font-weight:700;}
+
+  /* ---------- AUTH: sign in / sign up + social ---------- */
+  [hidden]{display:none !important;}
+  .card-brand{display:none; align-items:center; gap:10px; margin-bottom:18px;}
+  .auth-panel.panel-in{animation:panelIn .28s ease-out;}
+  @keyframes panelIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+  .login-card .field{margin-bottom:15px;}
+  .login-card .lead{margin-bottom:20px;}
+  .login-card .row-between{margin-bottom:18px;}
+  .btn:focus-visible, .link-btn:focus-visible, .eye-toggle:focus-visible{outline:2px solid var(--cyan); outline-offset:2px;}
+  .social-row{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+  .btn-social{
+    height:46px; padding:0 8px; border-radius:11px; font-size:13px; font-weight:600; gap:8px;
+    background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text);
+  }
+  .btn-social svg{width:16px; height:16px; flex-shrink:0;}
+  .btn-social:hover{border-color:rgba(63,209,224,0.45); background:rgba(63,209,224,0.07); transform:translateY(-1px);}
+  .btn-social.loading{pointer-events:none; border-color:rgba(63,209,224,0.45);}
+  .btn-social .dot-loader span{background:var(--cyan);}
+  .login-card .or-divider{margin:14px 0;}
+  .btn-demo{height:46px; margin-top:12px; font-size:13.5px;}
+  .link-btn{
+    background:none; border:none; padding:0; font-size:inherit; color:var(--cyan); font-weight:600;
+  }
+  .link-btn:hover{text-decoration:underline; text-underline-offset:3px;}
+  .terms{margin-top:14px; font-size:11px; color:var(--text-3); line-height:1.55; text-align:center;}
+  .terms a{color:var(--text-2); text-decoration:none;}
+  .terms a:hover{color:var(--cyan); text-decoration:underline; text-underline-offset:3px;}
+  @media (max-width:760px){
+    .card-brand{display:flex;}
+    .login-right{padding:28px 18px 76px;}
+    .login-card{padding:26px 22px;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .login-card{animation:none;}
+  }
+
+  /* ---------- APP SHELL ---------- */
+  #app-view{display:none; height:100%;}
+  #app-view.active{display:flex;}
+  .sidebar{
+    width:228px; flex-shrink:0; background:var(--bg-2); border-right:1px solid var(--border);
+    display:flex; flex-direction:column; padding:18px 12px; transition:width .18s ease;
+    padding-top:calc(18px + env(safe-area-inset-top,0px));
+  }
+  .sidebar.collapsed{width:72px;}
+  .sidebar.collapsed .label-text, .sidebar.collapsed .group-title, .sidebar.collapsed .status-detail{display:none;}
+  .sidebar.collapsed .brand-name{display:none;}
+  .side-header{display:flex; align-items:center; justify-content:space-between; padding:0 6px 22px;}
+  .side-brand{display:flex; align-items:center; gap:9px;}
+  .side-brand .bolt{width:28px; height:28px; font-size:14px; border-radius:8px;}
+  .collapse-btn{background:none; border:none; color:var(--text-3); font-size:15px; padding:4px;}
+  .collapse-btn:hover{color:var(--text);}
+  .group-title{font-size:10.5px; letter-spacing:.06em; color:var(--text-3); font-weight:600; padding:16px 10px 6px; text-transform:uppercase;}
+  .nav-item{
+    display:flex; align-items:center; gap:11px; padding:9px 10px; border-radius:var(--radius-sm);
+    color:var(--text-2); font-size:13.6px; font-weight:500; margin-bottom:2px; border:1px solid transparent;
+    white-space:nowrap; overflow:hidden;
+  }
+  .nav-item .ic{font-size:15px; width:18px; text-align:center; flex-shrink:0;}
+  .nav-item:hover{background:var(--card); color:var(--text);}
+  .nav-item.active{background:var(--cyan-dim); color:var(--cyan); border-color:rgba(63,209,224,0.25);}
+  .nav-item .badge{margin-left:auto; background:var(--red); color:white; font-size:10px; font-weight:700; padding:1px 6px; border-radius:20px;}
+  .sidebar-status{
+    margin-top:auto; background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm);
+    padding:12px; font-size:12px;
+  }
+  .status-title{font-size:10px; letter-spacing:.06em; color:var(--text-3); font-weight:700; margin-bottom:8px;}
+  .status-line{display:flex; align-items:center; gap:7px; color:var(--green); font-weight:600; margin-bottom:4px;}
+  .status-detail{color:var(--text-3); font-size:11px;}
+  .dot{width:7px; height:7px; border-radius:50%; background:currentColor; box-shadow:0 0 8px currentColor; flex-shrink:0;}
+
+  .main-col{flex:1; display:flex; flex-direction:column; min-width:0; height:100%;}
+  .topbar{
+    height:52px; flex-shrink:0; border-bottom:1px solid var(--border); background:rgba(15,20,32,0.7); backdrop-filter:blur(10px);
+    display:flex; align-items:center; justify-content:space-between; padding:0 22px;
+    padding-top:env(safe-area-inset-top,0px);
+  }
+  .page-title{font-size:14.5px; font-weight:600;}
+  .top-status{display:flex; align-items:center; gap:18px;}
+  .status-pill{display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-2); font-family:var(--mono); font-weight:500;}
+  .status-pill.strong{color:var(--green); font-weight:700;}
+  .status-pill.strong.incident{color:var(--red);}
+  #top-status-row{display:flex; align-items:center; gap:18px; transition:opacity .2s;}
+
+  .content-wrap{flex:1; overflow-y:auto; display:flex;}
+  .center-col{flex:1; min-width:0; padding:26px 28px 60px;}
+  .right-col{width:290px; flex-shrink:0; border-left:1px solid var(--border); padding:22px 18px; overflow-y:auto;}
+
+  .view{display:none;}
+  .view.active{display:block;}
+
+  h1.page-h{font-size:22px; font-weight:700; margin:0 0 4px; letter-spacing:-0.01em;}
+  .page-sub{color:var(--text-2); font-size:13.5px; margin:0 0 24px;}
+
+  .metric-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:26px;}
+  .metric-card{
+    background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+    padding:18px 18px 16px;
+  }
+  .metric-label{font-size:11.5px; color:var(--text-2); font-weight:600; letter-spacing:.02em; margin-bottom:10px;}
+  .metric-value{font-size:26px; font-weight:700; letter-spacing:-0.01em; margin-bottom:6px;}
+  .metric-delta{font-size:12px; font-weight:600; display:flex; align-items:center; gap:4px;}
+  .metric-delta.up{color:var(--green);}
+  .metric-delta.flat{color:var(--text-2);}
+
+  .two-col{display:grid; grid-template-columns:1fr 320px; gap:20px; align-items:start;}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px;}
+  .card-title{font-size:14px; font-weight:700; margin:0 0 14px; display:flex; align-items:center; justify-content:space-between;}
+
+  .composer{
+    background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px;
+    display:flex; gap:12px; margin-bottom:18px; align-items:flex-start;
+  }
+  .avatar{width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg, var(--blue), var(--cyan)); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; color:#04141a;}
+  .composer input{flex:1; background:transparent; border:none; color:var(--text); font-size:14.5px; outline:none; padding-top:9px;}
+  .composer input::placeholder{color:var(--text-3);}
+  .composer-btn{background:var(--cyan-dim); color:var(--cyan); border:none; padding:9px 18px; border-radius:20px; font-weight:600; font-size:13px; flex-shrink:0;}
+
+  .post{border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:12px; background:var(--card);}
+  .post-head{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
+  .post-name{font-weight:600; font-size:13.5px;}
+  .post-handle{color:var(--text-3); font-size:12.5px;}
+  .post-time{color:var(--text-3); font-size:12px; margin-left:auto;}
+  .post-body{font-size:14px; line-height:1.55; color:var(--text); margin-bottom:12px;}
+  .post-tag{display:inline-block; background:var(--cyan-dim); color:var(--cyan); font-size:11.5px; font-family:var(--mono); padding:2px 8px; border-radius:6px; margin-top:8px;}
+  .post-actions{display:flex; gap:26px; color:var(--text-3); font-size:12.5px;}
+  .post-actions span{display:flex; align-items:center; gap:6px; transition:color .12s;}
+  .post-actions span:hover{color:var(--cyan);}
+
+  .status-row{display:flex; align-items:center; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--border);}
+  .status-row:last-child{border-bottom:none;}
+  .status-row-label{display:flex; align-items:center; gap:9px; font-size:13px; color:var(--text-2);}
+  .bar-track{width:90px; height:6px; background:var(--border); border-radius:6px; overflow:hidden;}
+  .bar-fill{height:100%; border-radius:6px;}
+  .status-row-val{font-family:var(--mono); font-size:12.5px; font-weight:600; width:44px; text-align:right;}
+
+  .fab{
+    position:fixed; bottom:28px; right:28px; background:linear-gradient(135deg, var(--cyan), var(--blue));
+    color:#04141a; border:none; padding:14px 22px; border-radius:30px; font-weight:700; font-size:13.5px;
+    box-shadow:0 8px 30px rgba(63,209,224,0.3); display:flex; align-items:center; gap:8px; z-index:30;
+  }
+  .modal-overlay{position:fixed; inset:0; background:rgba(4,6,12,0.6); backdrop-filter:blur(3px); display:none; align-items:center; justify-content:center; z-index:60;}
+  .modal-overlay.active{display:flex;}
+  .modal{width:460px; max-width:92vw; background:var(--bg-2); border:1px solid var(--border); border-radius:var(--radius); padding:20px;}
+  .modal-title{font-size:15px; font-weight:700; margin-bottom:14px;}
+  .modal textarea{
+    width:100%; min-height:110px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm);
+    color:var(--text); padding:12px; font-size:14px; font-family:inherit; resize:vertical; outline:none; margin-bottom:12px;
+  }
+  .modal textarea:focus{border-color:var(--cyan);}
+  .modal-tools{display:flex; gap:10px; margin-bottom:16px;}
+  .tool-chip{background:var(--card); border:1px solid var(--border); color:var(--text-2); padding:7px 13px; border-radius:20px; font-size:12.5px;}
+  .modal-footer{display:flex; justify-content:flex-end; gap:10px;}
+  .btn-ghost{background:transparent; border:1px solid var(--border); color:var(--text-2); padding:9px 16px; border-radius:var(--radius-sm); font-size:13.5px; font-weight:600;}
+  .btn-cta{background:linear-gradient(135deg, var(--cyan), var(--blue)); color:#04141a; border:none; padding:9px 18px; border-radius:var(--radius-sm); font-size:13.5px; font-weight:700;}
+
+  .health-hero{
+    background:linear-gradient(135deg, rgba(62,207,142,0.10), rgba(63,209,224,0.05));
+    border:1px solid rgba(62,207,142,0.25); border-radius:var(--radius); padding:26px 28px; margin-bottom:24px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .health-hero.incident{background:linear-gradient(135deg, rgba(240,85,90,0.12), rgba(240,85,90,0.04)); border-color:rgba(240,85,90,0.3);}
+  .health-hero-left h2{font-size:21px; margin:0 0 4px; display:flex; align-items:center; gap:10px;}
+  .health-hero-left p{margin:0; color:var(--text-2); font-size:13px;}
+  .health-hero-right{text-align:right;}
+  .health-hero-right .big{font-size:30px; font-weight:800; color:var(--green);}
+  .health-hero.incident .health-hero-right .big{color:var(--red);}
+  .health-hero-right .small{font-size:12px; color:var(--text-2);}
+
+  .chart-card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:16px;}
+  .chart-title-row{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .chart-title{font-size:13px; font-weight:700;}
+  .chart-current{font-family:var(--mono); font-size:12.5px; color:var(--text-2);}
+  .sparkline{width:100%; height:70px; display:block;}
+
+  .placeholder-view{display:flex; flex-direction:column; align-items:center; justify-content:center; padding:100px 20px; text-align:center; color:var(--text-2);}
+  .placeholder-view .ic-big{font-size:38px; margin-bottom:14px; opacity:0.6;}
+  .placeholder-view h3{color:var(--text); font-size:17px; margin:0 0 8px;}
+  .placeholder-view p{font-size:13.5px; max-width:340px; margin:0;}
+
+  .chaos-toggle-card{display:flex; align-items:center; justify-content:space-between; padding:16px 18px;}
+  .switch{position:relative; width:46px; height:26px; background:var(--border); border-radius:20px; border:none; flex-shrink:0;}
+  .switch::after{content:''; position:absolute; top:3px; left:3px; width:20px; height:20px; background:var(--text-2); border-radius:50%; transition:all .18s;}
+  .switch.on{background:var(--red-dim); border:1px solid var(--red);}
+  .switch.on::after{left:23px; background:var(--red);}
+
+  .right-col h4{font-size:12px; color:var(--text-3); text-transform:uppercase; letter-spacing:.05em; margin:0 0 12px; font-weight:700;}
+  .activity-item{display:flex; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); font-size:12.5px;}
+  .activity-item:last-child{border-bottom:none;}
+  .activity-dot{width:7px; height:7px; border-radius:50%; margin-top:5px; flex-shrink:0;}
+  .activity-text{color:var(--text-2); line-height:1.5;}
+  .activity-text b{color:var(--text); font-weight:600;}
+  .activity-time{color:var(--text-3); font-size:11px; margin-top:2px;}
+
+  /* ---------- feature views ---------- */
+  .search-box{display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--border); border-radius:24px; padding:11px 16px; margin-bottom:22px; max-width:420px;}
+  .search-box input{flex:1; background:none; border:none; outline:none; color:var(--text); font-size:13.5px;}
+  .search-box input::placeholder{color:var(--text-3);}
+  .section-label{font-size:12px; font-weight:700; color:var(--text-3); text-transform:uppercase; letter-spacing:.05em; margin:22px 0 12px;}
+  .section-label:first-child{margin-top:0;}
+  .topic-row{display:flex; align-items:center; justify-content:space-between; padding:12px 4px; border-bottom:1px solid var(--border); cursor:pointer;}
+  .topic-row:last-child{border-bottom:none;}
+  .topic-row:hover .topic-name{color:var(--cyan);}
+  .topic-name{font-weight:600; font-size:13.5px; transition:color .12s;}
+  .topic-meta{color:var(--text-3); font-size:12px; margin-top:2px;}
+  .topic-count{font-family:var(--mono); font-size:12px; color:var(--text-2);}
+  .suggest-row{display:flex; align-items:center; gap:10px; padding:10px 4px;}
+  .suggest-row .avatar{width:34px; height:34px; font-size:12px;}
+  .suggest-name{font-weight:600; font-size:13px;}
+  .suggest-handle{color:var(--text-3); font-size:11.5px;}
+  .follow-btn{margin-left:auto; background:var(--cyan-dim); color:var(--cyan); border:none; padding:6px 14px; border-radius:16px; font-size:12px; font-weight:700;}
+  .follow-btn.following{background:transparent; border:1px solid var(--border); color:var(--text-2);}
+
+  .notif-item{display:flex; gap:12px; padding:14px 4px; border-bottom:1px solid var(--border); position:relative;}
+  .notif-item.unread{background:linear-gradient(90deg, var(--cyan-dim), transparent 40%);}
+  .notif-item.unread::before{content:''; position:absolute; left:-2px; top:18px; width:6px; height:6px; border-radius:50%; background:var(--cyan);}
+  .notif-ic{width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:15px;}
+  .notif-text{font-size:13.5px; line-height:1.5;}
+  .notif-time{color:var(--text-3); font-size:11.5px; margin-top:3px;}
+  .mark-all{background:none; border:1px solid var(--border); color:var(--text-2); padding:7px 14px; border-radius:var(--radius-sm); font-size:12.5px; font-weight:600;}
+
+  .msg-shell{display:grid; grid-template-columns:250px 1fr; gap:0; height:520px; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;}
+  .msg-list{background:var(--card); border-right:1px solid var(--border); overflow-y:auto;}
+  .msg-thread-row{display:flex; gap:10px; padding:13px 14px; border-bottom:1px solid var(--border); cursor:pointer;}
+  .msg-thread-row:hover, .msg-thread-row.active{background:var(--card-hover);}
+  .msg-thread-name{font-weight:600; font-size:13px;}
+  .msg-thread-preview{color:var(--text-3); font-size:11.5px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .msg-panel{display:flex; flex-direction:column; background:var(--bg-2);}
+  .msg-header{padding:14px 18px; border-bottom:1px solid var(--border); font-weight:600; font-size:13.5px;}
+  .msg-body{flex:1; overflow-y:auto; padding:16px 18px; display:flex; flex-direction:column; gap:10px;}
+  .bubble{max-width:70%; padding:9px 13px; border-radius:14px; font-size:13px; line-height:1.5;}
+  .bubble.in{background:var(--card); align-self:flex-start; border-bottom-left-radius:4px;}
+  .bubble.out{background:var(--cyan-dim); color:var(--text); align-self:flex-end; border-bottom-right-radius:4px;}
+  .msg-input-row{display:flex; gap:10px; padding:12px 14px; border-top:1px solid var(--border);}
+  .msg-input-row input{flex:1; background:var(--card); border:1px solid var(--border); border-radius:20px; padding:9px 15px; color:var(--text); font-size:13px; outline:none;}
+  .msg-send{background:var(--cyan); color:#04141a; border:none; padding:9px 16px; border-radius:20px; font-weight:700; font-size:12.5px;}
+
+  .term{background:#04070D; border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; font-family:var(--mono); font-size:12.3px; line-height:1.9; height:280px; overflow-y:auto; color:#8FE3C7;}
+  .term .lvl-info{color:#5B9CF0;} .term .lvl-warn{color:var(--amber);} .term .lvl-err{color:var(--red);}
+  .trace-row{display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); font-size:12.5px;}
+  .trace-row:last-child{border-bottom:none;}
+  .trace-svc{font-weight:600; width:140px; flex-shrink:0;}
+  .trace-bar-track{flex:1; background:var(--border); height:6px; border-radius:6px; overflow:hidden;}
+  .trace-bar{height:100%; border-radius:6px; background:var(--cyan);}
+  .trace-ms{width:60px; text-align:right; font-family:var(--mono); color:var(--text-2); flex-shrink:0;}
+
+  .topo-legend{display:flex; gap:16px; margin-bottom:14px; font-size:12px; color:var(--text-2);}
+  .topo-legend span{display:flex; align-items:center; gap:6px;}
+
+  .rca-item{border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:10px; overflow:hidden;}
+  .rca-head{display:flex; align-items:center; gap:12px; padding:14px 16px; cursor:pointer;}
+  .rca-sev{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
+  .rca-title{font-weight:600; font-size:13.5px; flex:1;}
+  .rca-time{color:var(--text-3); font-size:11.5px;}
+  .rca-body{padding:0 16px 16px 36px; font-size:12.8px; color:var(--text-2); line-height:1.7; display:none;}
+  .rca-item.open .rca-body{display:block;}
+  .rca-chip{display:inline-block; background:var(--card); border:1px solid var(--border); padding:2px 9px; border-radius:12px; font-size:11px; font-family:var(--mono); margin-right:6px; margin-top:6px;}
+
+  .price-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .price-card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:22px; text-align:left;}
+  .price-card.featured{border-color:var(--cyan); box-shadow:0 0 0 1px var(--cyan), 0 12px 30px rgba(63,209,224,0.12); position:relative;}
+  .price-tag{position:absolute; top:-11px; left:22px; background:var(--cyan); color:#04141a; font-size:10.5px; font-weight:700; padding:3px 10px; border-radius:12px;}
+  .price-name{font-weight:700; font-size:15px; margin-bottom:4px;}
+  .price-amt{font-size:28px; font-weight:800; margin-bottom:14px;}
+  .price-amt span{font-size:13px; font-weight:500; color:var(--text-2);}
+  .price-feat{list-style:none; padding:0; margin:0 0 18px; font-size:12.8px; color:var(--text-2); line-height:2.1;}
+  .price-feat li::before{content:'✓ '; color:var(--green); font-weight:700;}
+  .price-btn{width:100%; padding:10px; border-radius:var(--radius-sm); font-weight:700; font-size:13px; border:1px solid var(--border); background:transparent; color:var(--text);}
+  .price-btn.primary{background:linear-gradient(135deg, var(--cyan), var(--blue)); color:#04141a; border:none;}
+
+  .profile-hero{display:flex; gap:18px; align-items:center; margin-bottom:20px;}
+  .profile-hero .avatar{width:72px; height:72px; font-size:26px;}
+  .profile-name{font-size:19px; font-weight:700;}
+  .profile-handle{color:var(--text-3); font-size:13px; margin-bottom:6px;}
+  .profile-bio{color:var(--text-2); font-size:13px; max-width:420px;}
+  .profile-stats{display:flex; gap:26px; margin-top:24px; padding:16px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border);}
+  .profile-stat b{display:block; font-size:18px; font-weight:700;}
+  .profile-stat span{color:var(--text-3); font-size:12px;}
+
+  .toggle-row{display:flex; align-items:center; justify-content:space-between; padding:14px 4px; border-bottom:1px solid var(--border);}
+  .toggle-row:last-child{border-bottom:none;}
+  .toggle-row-name{font-weight:600; font-size:13.5px; margin-bottom:2px;}
+  .toggle-row-desc{color:var(--text-3); font-size:12px;}
+
+  @media (max-width:1100px){
+    .right-col{display:none;}
+    .metric-grid{grid-template-columns:repeat(2,1fr);}
+  }
+  @media (max-width:760px){
+    .sidebar{position:fixed; left:0; top:0; bottom:0; z-index:40; transform:translateX(-100%); transition:transform .2s;}
+    .sidebar.mobile-open{transform:translateX(0);}
+    .login-left{display:none;}
+    .login-right{width:100%; border-left:none;}
+    .metric-grid{grid-template-columns:1fr 1fr;}
+    .two-col{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="login-bg" aria-hidden="true">
+  <canvas id="login-dots"></canvas>
+  <div class="vignette"></div>
+</div>
+
+<!-- provider icons -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-google" viewBox="0 0 24 24">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    </symbol>
+    <symbol id="i-github" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.699-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.379.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.577.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/>
+    </symbol>
+    <symbol id="i-apple" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.04 2.26-.79 3.59-.76 1.56.04 2.88.75 3.65 1.89-3.08 1.75-2.58 5.61.35 6.75-1.01 2.37-2.39 4.39-4.29 4.29zM12.03 7.25c-.15-2.23 1.66-4.07 3.72-4.25.36 2.38-1.92 4.34-3.72 4.25z"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div id="login-view">
+  <div class="login-left" id="login-left">
+    <div class="brand-row"><div class="bolt">⚡</div><div class="brand-name">NexaTweet</div></div>
+    <h1 class="login-headline">Social intelligence.<br><span class="accent">System observability.</span></h1>
+    <p class="login-sub">Connect, monitor, analyze and control your digital social infrastructure in real time.</p>
+    <div class="feature-row">
+      <div class="feature-card"><span class="ic">⚡</span><div><b>Real-Time Telemetry</b>Live infra signals</div></div>
+      <div class="feature-card"><span class="ic">🧠</span><div><b>Intelligent RCA</b>Automated root cause</div></div>
+      <div class="feature-card"><span class="ic">🔥</span><div><b>Controlled Chaos</b>Safe fault injection</div></div>
+    </div>
+
+    <div class="node-viz" id="node-viz">
+      <svg viewBox="0 0 460 230">
+        <defs>
+          <radialGradient id="coreGlass" cx="38%" cy="32%" r="75%">
+            <stop offset="0%" stop-color="#bdf6ff" stop-opacity="0.9"/>
+            <stop offset="35%" stop-color="#3FD1E0" stop-opacity="0.55"/>
+            <stop offset="100%" stop-color="#0F1420" stop-opacity="0.95"/>
+          </radialGradient>
+        </defs>
+
+        <line class="node-line" x1="230" y1="115" x2="230" y2="30"/>
+        <line class="node-line" x1="230" y1="115" x2="70" y2="115"/>
+        <line class="node-line" x1="230" y1="115" x2="390" y2="115"/>
+        <line class="node-line" x1="230" y1="115" x2="230" y2="200"/>
+
+        <line class="node-line node-pulse" id="pulse-1" stroke-dasharray="5 7" x1="230" y1="115" x2="230" y2="30"/>
+        <line class="node-line node-pulse" id="pulse-2" stroke-dasharray="5 7" style="animation-delay:.6s" x1="230" y1="115" x2="70" y2="115"/>
+        <line class="node-line node-pulse" id="pulse-3" stroke-dasharray="5 7" style="animation-delay:1.1s" x1="230" y1="115" x2="390" y2="115"/>
+        <line class="node-line node-pulse" id="pulse-4" stroke-dasharray="5 7" style="animation-delay:1.6s" x1="230" y1="115" x2="230" y2="200"/>
+
+        <circle class="node-core-ring" cx="230" cy="115" r="24" fill="none" stroke="#3FD1E0" stroke-width="1.5"/>
+        <circle class="core-sphere" id="core-sphere" cx="230" cy="115" r="19" fill="url(#coreGlass)" stroke="#3FD1E0" stroke-width="1.5"/>
+        <g class="orbit-particle" style="transform-origin:230px 115px;"><circle cx="230" cy="115" r="2" fill="#bdf6ff"/></g>
+        <g class="orbit-particle p2" style="transform-origin:230px 115px;"><circle cx="230" cy="115" r="1.6" fill="#3FD1E0"/></g>
+        <text class="node-label core" x="230" y="152" text-anchor="middle">NEXATWEET CORE</text>
+        <text class="float-metric" x="255" y="98">CPU 42%</text>
+        <text class="float-metric m2" x="253" y="108">MEM 61%</text>
+        <text class="float-metric m3" x="253" y="128">API 84ms</text>
+
+        <circle class="node-dot" cx="230" cy="30" r="12" fill="#151B28" stroke="#7C6DF2" stroke-width="1.8" style="color:#7C6DF2"/>
+        <text class="node-label core" x="230" y="34" text-anchor="middle">🧠</text>
+        <text class="node-label" x="230" y="12" text-anchor="middle">NEXORA</text>
+
+        <circle class="node-dot" cx="70" cy="115" r="12" fill="#151B28" stroke="#3ECF8E" stroke-width="1.8" style="color:#3ECF8E"/>
+        <text class="node-label core" x="70" y="119" text-anchor="middle">🗄</text>
+        <text class="node-label" x="70" y="146" text-anchor="middle">DATABASE</text>
+
+        <circle class="node-dot" cx="390" cy="115" r="12" fill="#151B28" stroke="#3ECF8E" stroke-width="1.8" style="color:#3ECF8E"/>
+        <text class="node-label core" x="390" y="119" text-anchor="middle">🔌</text>
+        <text class="node-label" x="390" y="146" text-anchor="middle">API</text>
+
+        <circle class="node-dot" cx="230" cy="200" r="12" fill="#151B28" stroke="#3ECF8E" stroke-width="1.8" style="color:#3ECF8E"/>
+        <text class="node-label core" x="230" y="204" text-anchor="middle">📦</text>
+        <text class="node-label" x="230" y="222" text-anchor="middle">STORAGE</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="login-right">
+    <div class="login-card" id="login-card">
+      <div class="card-brand"><div class="bolt">⚡</div><div class="brand-name">NexaTweet</div></div>
+      <div class="nexora-pill"><span class="dot" style="color:var(--green); width:6px; height:6px;"></span> NEXORA SYSTEM ONLINE</div>
+
+      <!-- SIGN IN -->
+      <div class="auth-panel panel-in" id="panel-signin">
+        <h2>Welcome back 👋</h2>
+        <p class="lead">Sign in to access your NexaTweet workspace.</p>
+
+        <div class="error-banner" id="error-banner" role="alert">⚠ Authentication failed. Please check your credentials.</div>
+
+        <div class="field">
+          <label class="field-label" for="email-input">EMAIL ADDRESS</label>
+          <div class="input-shell" id="email-shell">
+            <span class="ic">✉</span>
+            <input id="email-input" type="email" data-kind="email" autocomplete="email" placeholder="you@example.com" value="sai@nexora.dev"
+              onfocus="focusField('email-shell')" onblur="blurField('email-shell', this)">
+          </div>
+          <div class="field-msg" id="email-msg"></div>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="pass-input">PASSWORD</label>
+          <div class="input-shell" id="pass-shell">
+            <span class="ic">🔒</span>
+            <input id="pass-input" type="password" data-kind="password" autocomplete="current-password" placeholder="Enter your password" value="nexora123"
+              onfocus="focusField('pass-shell')" onblur="blurField('pass-shell', this)">
+            <button type="button" class="eye-toggle" id="eye-btn" aria-label="Show or hide password" onclick="togglePwd('pass-input','eye-btn')">👁</button>
+          </div>
+          <div class="field-msg" id="pass-msg"></div>
+        </div>
+
+        <div class="row-between">
+          <label><input type="checkbox" checked> Remember me</label>
+          <a href="#">Forgot password?</a>
+        </div>
+
+        <button type="button" class="btn btn-primary" id="signin-btn" onclick="loginNow()">
+          <span id="signin-label">SIGN IN</span><span class="arrow" id="signin-arrow">→</span>
+        </button>
+
+        <div class="or-divider">OR CONTINUE WITH</div>
+        <div class="social-row">
+          <button type="button" class="btn btn-social" onclick="socialAuth(this)" aria-label="Continue with Google"><svg aria-hidden="true"><use href="#i-google"/></svg><span class="s-label">Google</span></button>
+          <button type="button" class="btn btn-social" onclick="socialAuth(this)" aria-label="Continue with GitHub"><svg aria-hidden="true"><use href="#i-github"/></svg><span class="s-label">GitHub</span></button>
+          <button type="button" class="btn btn-social" onclick="socialAuth(this)" aria-label="Continue with Apple"><svg aria-hidden="true"><use href="#i-apple"/></svg><span class="s-label">Apple</span></button>
+        </div>
+
+        <button type="button" class="btn btn-glass btn-demo" onclick="enterDemo()">ENTER DEMO MODE</button>
+
+        <div class="register-line">New to NexaTweet? <button type="button" class="link-btn" onclick="switchMode('signup')">Create an account</button></div>
+      </div>
+
+      <!-- SIGN UP -->
+      <div class="auth-panel" id="panel-signup" hidden>
+        <h2>Create your account 🚀</h2>
+        <p class="lead">Join NexaTweet and start monitoring in minutes.</p>
+
+        <div class="error-banner" id="su-error-banner" role="alert">⚠ Please complete all fields correctly.</div>
+
+        <div class="field">
+          <label class="field-label" for="name-input">FULL NAME</label>
+          <div class="input-shell" id="name-shell">
+            <span class="ic">👤</span>
+            <input id="name-input" type="text" data-kind="name" autocomplete="name" placeholder="Your full name"
+              onfocus="focusField('name-shell')" onblur="blurField('name-shell', this)">
+          </div>
+          <div class="field-msg" id="name-msg"></div>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="su-email-input">EMAIL ADDRESS</label>
+          <div class="input-shell" id="su-email-shell">
+            <span class="ic">✉</span>
+            <input id="su-email-input" type="email" data-kind="email" autocomplete="email" placeholder="name@work-email.com"
+              onfocus="focusField('su-email-shell')" onblur="blurField('su-email-shell', this)">
+          </div>
+          <div class="field-msg" id="su-email-msg"></div>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="su-pass-input">PASSWORD</label>
+          <div class="input-shell" id="su-pass-shell">
+            <span class="ic">🔒</span>
+            <input id="su-pass-input" type="password" data-kind="password" autocomplete="new-password" placeholder="At least 6 characters"
+              onfocus="focusField('su-pass-shell')" onblur="blurField('su-pass-shell', this)">
+            <button type="button" class="eye-toggle" id="su-eye-btn" aria-label="Show or hide password" onclick="togglePwd('su-pass-input','su-eye-btn')">👁</button>
+          </div>
+          <div class="field-msg" id="su-pass-msg"></div>
+        </div>
+
+        <button type="button" class="btn btn-primary" id="signup-btn" onclick="createAccount()" style="margin-top:4px;">
+          <span id="signup-label">CREATE ACCOUNT</span><span class="arrow" id="signup-arrow">→</span>
+        </button>
+
+        <div class="or-divider">OR SIGN UP WITH</div>
+        <div class="social-row">
+          <button type="button" class="btn btn-social" onclick="socialAuth(this)" aria-label="Sign up with Google"><svg aria-hidden="true"><use href="#i-google"/></svg><span class="s-label">Google</span></button>
+          <button type="button" class="btn btn-social" onclick="socialAuth(this)" aria-label="Sign up with GitHub"><svg aria-hidden="true"><use href="#i-github"/></svg><span class="s-label">GitHub</span></button>
+          <button type="button" class="btn btn-social" onclick="socialAuth(this)" aria-label="Sign up with Apple"><svg aria-hidden="true"><use href="#i-apple"/></svg><span class="s-label">Apple</span></button>
+        </div>
+
+        <div class="register-line">Already have an account? <button type="button" class="link-btn" onclick="switchMode('signin')">Sign in</button></div>
+        <div class="terms">By continuing, you agree to the NexaTweet<br><a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="login-status-bar">
+    <span class="strong"><span class="dot" style="color:var(--green)"></span> SYSTEM OPERATIONAL</span>
+    <span>NEXORA CONNECTED</span>
+    <span id="lb-cpu">CPU 42%</span>
+    <span id="lb-mem">MEMORY 61%</span>
+    <span id="lb-api">API 84ms</span>
+  </div>
+</div>
+
+<!-- ================= APP SHELL ================= -->
+<div id="app-view">
+  <div class="sidebar" id="sidebar">
+    <div class="side-header">
+      <div class="side-brand"><div class="bolt">⚡</div><div class="brand-name">NexaTweet</div></div>
+      <button class="collapse-btn" onclick="toggleSidebar()">◂</button>
+    </div>
+
+    <div class="group-title">Main</div>
+    <div class="nav-item active" data-view="home"><span class="ic">🏠</span><span class="label-text">Home</span></div>
+    <div class="nav-item" data-view="explore"><span class="ic">🔎</span><span class="label-text">Explore</span></div>
+    <div class="nav-item" data-view="notifications"><span class="ic">🔔</span><span class="label-text">Notifications</span><span class="badge">3</span></div>
+    <div class="nav-item" data-view="messages"><span class="ic">💬</span><span class="label-text">Messages</span></div>
+
+    <div class="group-title">Observability</div>
+    <div class="nav-item" data-view="health"><span class="ic">📊</span><span class="label-text">System Health</span></div>
+    <div class="nav-item" data-view="telemetry"><span class="ic">📡</span><span class="label-text">Telemetry</span></div>
+    <div class="nav-item" data-view="topology"><span class="ic">🗺</span><span class="label-text">Service Topology</span></div>
+    <div class="nav-item" data-view="rca"><span class="ic">🧠</span><span class="label-text">Root Cause Analysis</span></div>
+
+    <div class="group-title">Engineering</div>
+    <div class="nav-item" data-view="chaos"><span class="ic">🔥</span><span class="label-text">Chaos Lab</span></div>
+
+    <div class="group-title">Product</div>
+    <div class="nav-item" data-view="premium"><span class="ic">💳</span><span class="label-text">Premium</span></div>
+
+    <div class="group-title">Account</div>
+    <div class="nav-item" data-view="profile"><span class="ic">👤</span><span class="label-text">Profile</span></div>
+    <div class="nav-item" data-view="settings"><span class="ic">⚙</span><span class="label-text">Settings</span></div>
+
+    <div class="sidebar-status">
+      <div class="status-title">NEXORA STATUS</div>
+      <div class="status-line" id="nexora-line"><span class="dot"></span> Connected</div>
+      <div class="status-detail" id="heartbeat">Last heartbeat: 4 sec ago</div>
+    </div>
+  </div>
+
+  <div class="main-col">
+    <div class="topbar">
+      <div class="page-title" id="page-title">Home</div>
+      <div id="top-status-row">
+        <div class="status-pill strong" id="top-sys-status"><span class="dot"></span> SYSTEM OPERATIONAL</div>
+        <div class="status-pill" id="top-nexora">NEXORA CONNECTED</div>
+        <div class="status-pill" id="top-cpu">CPU 42%</div>
+        <div class="status-pill" id="top-mem">MEMORY 61%</div>
+        <div class="status-pill" id="top-db">DB CONNECTED</div>
+        <div class="status-pill" id="top-api">API 99.8%</div>
+      </div>
+    </div>
+
+    <div class="content-wrap">
+      <div class="center-col">
+
+        <!-- HOME -->
+        <div class="view active" id="view-home">
+          <h1 class="page-h">Good morning, Sai 👋</h1>
+          <p class="page-sub">Monitor your platform and stay connected.</p>
+
+          <div class="metric-grid">
+            <div class="metric-card"><div class="metric-label">TOTAL POSTS</div><div class="metric-value">12.8K</div><div class="metric-delta up">↑ 12.4%</div></div>
+            <div class="metric-card"><div class="metric-label">ACTIVE USERS</div><div class="metric-value">2,431</div><div class="metric-delta up">↑ 8.2%</div></div>
+            <div class="metric-card"><div class="metric-label">API REQUESTS</div><div class="metric-value">84.2K</div><div class="metric-delta up">↑ 15.8%</div></div>
+            <div class="metric-card"><div class="metric-label">SYSTEM HEALTH</div><div class="metric-value">99.8%</div><div class="metric-delta flat">🟢 Operational</div></div>
+          </div>
+
+          <div class="two-col">
+            <div id="home-feed">
+              <div class="composer">
+                <div class="avatar" id="composer-avatar">S</div>
+                <input readonly onclick="openComposer()" placeholder="What's happening?">
+                <button class="composer-btn" onclick="openComposer()">POST</button>
+              </div>
+
+              <div id="demo-posts">
+                <div class="post">
+                  <div class="post-head"><div class="avatar" style="width:34px;height:34px;font-size:12px;">R</div><div><div class="post-name">Riya Sharma</div><div class="post-handle">@riya.dev</div></div><div class="post-time">4m</div></div>
+                  <div class="post-body">Deployed the new caching layer for NEXORA — API latency down from 210ms to 124ms across the board. 🚀</div>
+                  <div class="post-tag">#latency-fix</div>
+                  <div class="post-actions" style="margin-top:12px;"><span>❤️ 128</span><span>💬 24</span><span>🔁 9</span><span>🔖</span></div>
+                </div>
+                <div class="post">
+                  <div class="post-head"><div class="avatar" style="width:34px;height:34px;font-size:12px;background:linear-gradient(135deg,#F5B94D,#F0555A);">A</div><div><div class="post-name">Arjun Mehta</div><div class="post-handle">@arjunm</div></div><div class="post-time">19m</div></div>
+                  <div class="post-body">Running a chaos experiment on the payments service in staging today. Watching the RCA engine flag the cascade in real time — genuinely impressive.</div>
+                  <div class="post-tag">#chaos-lab</div>
+                  <div class="post-actions" style="margin-top:12px;"><span>❤️ 76</span><span>💬 11</span><span>🔁 3</span><span>🔖</span></div>
+                </div>
+                <div class="post">
+                  <div class="post-head"><div class="avatar" style="width:34px;height:34px;font-size:12px;background:linear-gradient(135deg,#3ECF8E,#3FD1E0);">N</div><div><div class="post-name">Nikhil Rao</div><div class="post-handle">@n_rao</div></div><div class="post-time">1h</div></div>
+                  <div class="post-body">Service topology view finally renders our whole mesh without lag. 40+ nodes, live edges, zero jank.</div>
+                  <div class="post-actions" style="margin-top:12px;"><span>❤️ 54</span><span>💬 6</span><span>🔁 2</span><span>🔖</span></div>
+                </div>
+              </div>
+              <div id="real-feed"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">Live System Status</div>
+              <div class="status-row"><div class="status-row-label"><span class="dot" style="color:var(--green)"></span>CPU</div><div class="bar-track"><div class="bar-fill" id="home-bar-cpu" style="width:42%;background:var(--cyan)"></div></div><div class="status-row-val" id="home-val-cpu">42%</div></div>
+              <div class="status-row"><div class="status-row-label"><span class="dot" style="color:var(--green)"></span>Memory</div><div class="bar-track"><div class="bar-fill" id="home-bar-mem" style="width:61%;background:var(--blue)"></div></div><div class="status-row-val" id="home-val-mem">61%</div></div>
+              <div class="status-row"><div class="status-row-label"><span class="dot" style="color:var(--green)"></span>Database</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--green)"></div></div><div class="status-row-val" style="color:var(--green)">OK</div></div>
+              <div class="status-row"><div class="status-row-label"><span class="dot" style="color:var(--green)"></span>Storage</div><div class="bar-track"><div class="bar-fill" style="width:38%;background:var(--cyan)"></div></div><div class="status-row-val">38%</div></div>
+              <div class="status-row"><div class="status-row-label"><span class="dot" style="color:var(--green)"></span>API</div><div class="bar-track"><div class="bar-fill" style="width:99%;background:var(--green)"></div></div><div class="status-row-val" style="color:var(--green)">99.8%</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SYSTEM HEALTH -->
+        <div class="view" id="view-health">
+          <h1 class="page-h">System Health</h1>
+          <p class="page-sub">Real-time health overview of NexaTweet infrastructure.</p>
+
+          <div class="health-hero" id="health-hero">
+            <div class="health-hero-left">
+              <h2 id="health-hero-title">🟢 HEALTHY</h2>
+              <p>All core services are responding within expected thresholds.</p>
+            </div>
+            <div class="health-hero-right">
+              <div class="big" id="health-hero-big">99.8%</div>
+              <div class="small">Overall availability</div>
+            </div>
+          </div>
+
+          <div class="metric-grid">
+            <div class="metric-card"><div class="metric-label">CPU USAGE</div><div class="metric-value" id="hc-cpu">42%</div></div>
+            <div class="metric-card"><div class="metric-label">MEMORY</div><div class="metric-value" id="hc-mem">61%</div></div>
+            <div class="metric-card"><div class="metric-label">DATABASE</div><div class="metric-value" id="hc-db" style="color:var(--green); font-size:18px;">CONNECTED</div></div>
+            <div class="metric-card"><div class="metric-label">ACTIVE CONNECTIONS</div><div class="metric-value">128</div></div>
+            <div class="metric-card"><div class="metric-label">API LATENCY</div><div class="metric-value" id="hc-lat">124 ms</div></div>
+            <div class="metric-card"><div class="metric-label">ERROR RATE</div><div class="metric-value" id="hc-err">0.8%</div></div>
+          </div>
+
+          <div class="card-title" style="margin:8px 0 14px;">Live Performance</div>
+          <div class="chart-card">
+            <div class="chart-title-row"><div class="chart-title">CPU Usage</div><div class="chart-current" id="cpu-current">42%</div></div>
+            <svg class="sparkline" viewBox="0 0 400 70" preserveAspectRatio="none"><path id="spark-cpu" fill="none" stroke="#3FD1E0" stroke-width="2"/></svg>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title-row"><div class="chart-title">Memory Usage</div><div class="chart-current" id="mem-current">61%</div></div>
+            <svg class="sparkline" viewBox="0 0 400 70" preserveAspectRatio="none"><path id="spark-mem" fill="none" stroke="#4C8DFF" stroke-width="2"/></svg>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title-row"><div class="chart-title">API Latency</div><div class="chart-current" id="lat-current">124 ms</div></div>
+            <svg class="sparkline" viewBox="0 0 400 70" preserveAspectRatio="none"><path id="spark-lat" fill="none" stroke="#F5B94D" stroke-width="2"/></svg>
+          </div>
+        </div>
+
+        <!-- CHAOS LAB -->
+        <div class="view" id="view-chaos">
+          <h1 class="page-h">Chaos Lab</h1>
+          <p class="page-sub">Inject controlled failures and watch NEXORA detect, diagnose, and recover.</p>
+          <div class="card chaos-toggle-card" style="margin-bottom:18px;">
+            <div>
+              <div style="font-weight:700; font-size:14px; margin-bottom:3px;">Database Latency Injection</div>
+              <div style="color:var(--text-2); font-size:12.5px;">Simulates a slow query cascade on the primary Postgres instance.</div>
+            </div>
+            <button class="switch" id="chaos-switch" onclick="toggleChaos()"></button>
+          </div>
+          <div class="card">
+            <div class="card-title">Experiment Log</div>
+            <div id="chaos-log" style="font-family:var(--mono); font-size:12.5px; color:var(--text-2); line-height:1.9;">No active experiment. Toggle the switch above to begin.</div>
+          </div>
+        </div>
+
+        <!-- EXPLORE -->
+        <div class="view" id="view-explore">
+          <h1 class="page-h">Explore</h1>
+          <p class="page-sub">Trending topics and people across the NexaTweet network.</p>
+          <div class="search-box"><span>🔎</span><input placeholder="Search posts, people, services..."></div>
+          <div class="section-label">Trending in engineering</div>
+          <div class="topic-row"><div><div class="topic-name">#chaos-lab</div><div class="topic-meta">Controlled fault injection</div></div><div class="topic-count">1.2K posts</div></div>
+          <div class="topic-row"><div><div class="topic-name">#latency-fix</div><div class="topic-meta">Performance engineering</div></div><div class="topic-count">864 posts</div></div>
+          <div class="topic-row"><div><div class="topic-name">#root-cause</div><div class="topic-meta">AIOps & diagnostics</div></div><div class="topic-count">512 posts</div></div>
+          <div class="topic-row"><div><div class="topic-name">#service-mesh</div><div class="topic-meta">Distributed systems</div></div><div class="topic-count">340 posts</div></div>
+          <div class="section-label">Who to follow</div>
+          <div class="suggest-row"><div class="avatar">P</div><div><div class="suggest-name">Priya Nair</div><div class="suggest-handle">@priyan</div></div><button class="follow-btn" onclick="toggleFollow(this)">Follow</button></div>
+          <div class="suggest-row"><div class="avatar" style="background:linear-gradient(135deg,#F5B94D,#F0555A)">K</div><div><div class="suggest-name">Karan Verma</div><div class="suggest-handle">@karanv</div></div><button class="follow-btn" onclick="toggleFollow(this)">Follow</button></div>
+          <div class="suggest-row"><div class="avatar" style="background:linear-gradient(135deg,#3ECF8E,#3FD1E0)">S</div><div><div class="suggest-name">Sneha Iyer</div><div class="suggest-handle">@sneha_i</div></div><button class="follow-btn" onclick="toggleFollow(this)">Follow</button></div>
+        </div>
+
+        <!-- NOTIFICATIONS -->
+        <div class="view" id="view-notifications">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <div><h1 class="page-h">Notifications</h1><p class="page-sub">Mentions, replies, and system alerts.</p></div>
+            <button class="mark-all" onclick="markAllRead()">Mark all read</button>
+          </div>
+          <div id="notif-list">
+            <div id="demo-notifs">
+              <div class="notif-item unread"><div class="notif-ic" style="background:var(--red-dim); color:var(--red);">⚠</div><div><div class="notif-text"><b>NEXORA</b> flagged elevated error rate on payments-api</div><div class="notif-time">3 min ago</div></div></div>
+              <div class="notif-item unread"><div class="notif-ic" style="background:var(--cyan-dim); color:var(--cyan);">❤️</div><div><div class="notif-text"><b>Riya Sharma</b> liked your post about the caching layer</div><div class="notif-time">18 min ago</div></div></div>
+              <div class="notif-item unread"><div class="notif-ic" style="background:var(--green-dim); color:var(--green);">🧠</div><div><div class="notif-text"><b>RCA Engine</b> resolved the anomaly in auth-service</div><div class="notif-time">1 hr ago</div></div></div>
+              <div class="notif-item"><div class="notif-ic" style="background:var(--card); color:var(--text-2);">💬</div><div><div class="notif-text"><b>Nikhil Rao</b> commented: "This is clean work"</div><div class="notif-time">3 hr ago</div></div></div>
+              <div class="notif-item"><div class="notif-ic" style="background:var(--card); color:var(--text-2);">🔁</div><div><div class="notif-text"><b>Arjun Mehta</b> reposted your update</div><div class="notif-time">Yesterday</div></div></div>
+            </div>
+            <div id="real-notifs"></div>
+          </div>
+        </div>
+
+        <!-- MESSAGES -->
+        <div class="view" id="view-messages">
+          <h1 class="page-h">Messages</h1>
+          <p class="page-sub">Direct conversations with your team.</p>
+          <div class="msg-shell">
+            <div class="msg-list">
+              <div class="msg-thread-row active"><div class="avatar" style="width:36px;height:36px;font-size:12px;">R</div><div><div class="msg-thread-name">Riya Sharma</div><div class="msg-thread-preview">Latency's holding steady 🎉</div></div></div>
+              <div class="msg-thread-row"><div class="avatar" style="width:36px;height:36px;font-size:12px;background:linear-gradient(135deg,#F5B94D,#F0555A)">A</div><div><div class="msg-thread-name">Arjun Mehta</div><div class="msg-thread-preview">Starting the chaos run now</div></div></div>
+              <div class="msg-thread-row"><div class="avatar" style="width:36px;height:36px;font-size:12px;background:linear-gradient(135deg,#3ECF8E,#3FD1E0)">N</div><div><div class="msg-thread-name">Nikhil Rao</div><div class="msg-thread-preview">Topology view looks great</div></div></div>
+            </div>
+            <div class="msg-panel">
+              <div class="msg-header">Riya Sharma</div>
+              <div class="msg-body" id="msg-body">
+                <div class="bubble in">Deployed the caching update — keep an eye on p99 for the next hour.</div>
+                <div class="bubble out">On it, watching the telemetry dashboard now.</div>
+                <div class="bubble in">Latency's holding steady 🎉</div>
+              </div>
+              <div class="msg-input-row"><input id="msg-input" placeholder="Write a message..." onkeydown="if(event.key==='Enter')sendMsg()"><button class="msg-send" onclick="sendMsg()">Send</button></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TELEMETRY -->
+        <div class="view" id="view-telemetry">
+          <h1 class="page-h">Telemetry</h1>
+          <p class="page-sub">Live infrastructure signals and request traces.</p>
+          <div class="card-title">Live Log Stream</div>
+          <div class="term" id="log-term"></div>
+          <div class="card-title" style="margin-top:20px;">Slowest Traces</div>
+          <div class="card">
+            <div class="trace-row"><div class="trace-svc">payments-api</div><div class="trace-bar-track"><div class="trace-bar" style="width:82%; background:var(--red);"></div></div><div class="trace-ms">312ms</div></div>
+            <div class="trace-row"><div class="trace-svc">auth-service</div><div class="trace-bar-track"><div class="trace-bar" style="width:44%; background:var(--amber);"></div></div><div class="trace-ms">168ms</div></div>
+            <div class="trace-row"><div class="trace-svc">notification-svc</div><div class="trace-bar-track"><div class="trace-bar" style="width:30%;"></div></div><div class="trace-ms">96ms</div></div>
+            <div class="trace-row"><div class="trace-svc">media-storage</div><div class="trace-bar-track"><div class="trace-bar" style="width:22%;"></div></div><div class="trace-ms">61ms</div></div>
+            <div class="trace-row"><div class="trace-svc">search-index</div><div class="trace-bar-track"><div class="trace-bar" style="width:15%;"></div></div><div class="trace-ms">44ms</div></div>
+          </div>
+        </div>
+
+        <!-- SERVICE TOPOLOGY -->
+        <div class="view" id="view-topology">
+          <h1 class="page-h">Service Topology</h1>
+          <p class="page-sub">Live map of NEXORA services and their dependencies.</p>
+          <div class="topo-legend"><span><span class="dot" style="color:var(--green)"></span>Healthy</span><span><span class="dot" style="color:var(--amber)"></span>Degraded</span><span><span class="dot" style="color:var(--red)"></span>Down</span></div>
+          <div class="card">
+            <svg viewBox="0 0 720 340" style="width:100%; height:340px;">
+              <g stroke="#252D3D" stroke-width="1.5" fill="none">
+                <line x1="120" y1="70" x2="330" y2="70"/><line x1="330" y1="70" x2="560" y2="70"/>
+                <line x1="330" y1="70" x2="330" y2="180"/><line x1="330" y1="180" x2="150" y2="260"/>
+                <line x1="330" y1="180" x2="330" y2="280"/><line x1="330" y1="180" x2="520" y2="260"/>
+                <line x1="560" y1="70" x2="560" y2="180"/><line x1="560" y1="180" x2="330" y2="180"/>
+              </g>
+              <g font-family="Inter, sans-serif" font-size="11.5" fill="#F4F6FA" text-anchor="middle">
+                <circle cx="120" cy="70" r="26" fill="#151B28" stroke="#3ECF8E" stroke-width="2"/><text x="120" y="74">gateway</text>
+                <circle cx="330" cy="70" r="26" fill="#151B28" stroke="#3ECF8E" stroke-width="2"/><text x="330" y="74">auth-svc</text>
+                <circle cx="560" cy="70" r="26" fill="#151B28" stroke="#3ECF8E" stroke-width="2"/><text x="560" y="74">feed-svc</text>
+                <circle cx="330" cy="180" r="28" fill="#151B28" stroke="#3ECF8E" stroke-width="2.5" id="topo-db"/><text x="330" y="184">primary-db</text>
+                <circle cx="150" cy="260" r="26" fill="#151B28" stroke="#F5B94D" stroke-width="2"/><text x="150" y="264">payments</text>
+                <circle cx="330" cy="280" r="26" fill="#151B28" stroke="#3ECF8E" stroke-width="2"/><text x="330" y="284">media-store</text>
+                <circle cx="520" cy="260" r="26" fill="#151B28" stroke="#3ECF8E" stroke-width="2"/><text x="520" y="264">search-idx</text>
+                <circle cx="560" cy="180" r="26" fill="#151B28" stroke="#3ECF8E" stroke-width="2"/><text x="560" y="184">notif-svc</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <!-- ROOT CAUSE ANALYSIS -->
+        <div class="view" id="view-rca">
+          <h1 class="page-h">Root Cause Analysis</h1>
+          <p class="page-sub">Automated diagnosis reports for recent incidents.</p>
+          <div id="rca-list">
+            <div class="rca-item" onclick="this.classList.toggle('open')">
+              <div class="rca-head"><span class="rca-sev" style="background:var(--green)"></span><span class="rca-title">auth-service token cache miss spike</span><span class="rca-time">Resolved · 1h ago</span></div>
+              <div class="rca-body">Root cause: a cache eviction policy change reduced TTL on session tokens, forcing repeated DB lookups. NEXORA correlated the spike with the deploy at 09:12 and auto-reverted the config.
+                <div><span class="rca-chip">auth-service</span><span class="rca-chip">primary-db</span><span class="rca-chip">auto-resolved</span></div>
+              </div>
+            </div>
+            <div class="rca-item" onclick="this.classList.toggle('open')">
+              <div class="rca-head"><span class="rca-sev" style="background:var(--amber)"></span><span class="rca-title">payments-api elevated p99 latency</span><span class="rca-time">Monitoring · 3h ago</span></div>
+              <div class="rca-body">Root cause: a slow downstream call to the fraud-check provider is adding ~180ms per request under load. NEXORA recommends adding a circuit breaker with a 200ms timeout.
+                <div><span class="rca-chip">payments-api</span><span class="rca-chip">fraud-check</span><span class="rca-chip">recommendation issued</span></div>
+              </div>
+            </div>
+            <div class="rca-item" id="rca-live" style="display:none;" onclick="this.classList.toggle('open')">
+              <div class="rca-head"><span class="rca-sev" style="background:var(--red)"></span><span class="rca-title">Database latency injection — active experiment</span><span class="rca-time">Now</span></div>
+              <div class="rca-body">NEXORA has detected a live latency fault on primary-db, cascading into payments-api and auth-service. This matches the experiment currently running in Chaos Lab.
+                <div><span class="rca-chip">primary-db</span><span class="rca-chip">payments-api</span><span class="rca-chip">chaos-lab</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PREMIUM -->
+        <div class="view" id="view-premium">
+          <h1 class="page-h">Premium</h1>
+          <p class="page-sub">Upgrade for deeper telemetry retention and priority diagnostics.</p>
+          <div class="price-grid">
+            <div class="price-card">
+              <div class="price-name">Starter</div>
+              <div class="price-amt">$0<span>/mo</span></div>
+              <ul class="price-feat"><li>24h telemetry retention</li><li>Basic system health</li><li>3 chaos experiments/mo</li></ul>
+              <button class="price-btn">Current plan</button>
+            </div>
+            <div class="price-card featured">
+              <div class="price-tag">Most popular</div>
+              <div class="price-name">Pro</div>
+              <div class="price-amt">$29<span>/mo</span></div>
+              <ul class="price-feat"><li>30-day telemetry retention</li><li>Priority RCA queue</li><li>Unlimited chaos experiments</li><li>Service topology export</li></ul>
+              <button class="price-btn primary" onclick="this.textContent='Upgraded ✓'">Upgrade</button>
+            </div>
+            <div class="price-card">
+              <div class="price-name">Enterprise</div>
+              <div class="price-amt">Custom</div>
+              <ul class="price-feat"><li>Unlimited retention</li><li>Dedicated RCA engineer</li><li>SSO & audit logs</li></ul>
+              <button class="price-btn">Contact sales</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PROFILE -->
+        <div class="view" id="view-profile">
+          <div class="profile-hero">
+            <div class="avatar">S</div>
+            <div>
+              <div class="profile-name">Sai</div>
+              <div class="profile-handle">@sai.dev</div>
+              <div class="profile-bio">Full-stack developer. Building AIOps tooling and shipping side projects on NexaTweet.</div>
+            </div>
+          </div>
+          <div class="profile-stats">
+            <div class="profile-stat"><b>142</b><span>Posts</span></div>
+            <div class="profile-stat"><b>1.8K</b><span>Followers</span></div>
+            <div class="profile-stat"><b>312</b><span>Following</span></div>
+            <div class="profile-stat"><b>6</b><span>Chaos experiments run</span></div>
+          </div>
+          <div class="section-label">Recent posts</div>
+          <div class="post"><div class="post-body">Just wired up live sparklines on the System Health page — feels great watching real numbers move.</div><div class="post-actions"><span>❤️ 41</span><span>💬 5</span><span>🔁 1</span></div></div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div class="view" id="view-settings">
+          <h1 class="page-h">Settings</h1>
+          <p class="page-sub">Manage your account and workspace preferences.</p>
+          <div class="section-label">Notifications</div>
+          <div class="card">
+            <div class="toggle-row"><div><div class="toggle-row-name">Incident alerts</div><div class="toggle-row-desc">Notify me when NEXORA detects an incident</div></div><button class="switch on" onclick="this.classList.toggle('on')"></button></div>
+            <div class="toggle-row"><div><div class="toggle-row-name">Post likes & comments</div><div class="toggle-row-desc">Notify me about activity on my posts</div></div><button class="switch on" onclick="this.classList.toggle('on')"></button></div>
+            <div class="toggle-row"><div><div class="toggle-row-name">Weekly digest</div><div class="toggle-row-desc">A summary of platform activity every Monday</div></div><button class="switch" onclick="this.classList.toggle('on')"></button></div>
+          </div>
+          <div class="section-label">Workspace</div>
+          <div class="card">
+            <div class="toggle-row"><div><div class="toggle-row-name">Compact sidebar</div><div class="toggle-row-desc">Start with the sidebar collapsed</div></div><button class="switch" onclick="this.classList.toggle('on')"></button></div>
+            <div class="toggle-row"><div><div class="toggle-row-name">Reduced motion</div><div class="toggle-row-desc">Minimize live chart animation</div></div><button class="switch" id="reduced-motion-switch" onclick="this.classList.toggle('on'); toggleReducedMotion(this)"></button></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="right-col">
+        <h4>Activity</h4>
+        <div class="activity-item"><div class="activity-dot" style="background:var(--green)"></div><div><div class="activity-text"><b>RCA Engine</b> resolved an anomaly in auth-service</div><div class="activity-time">2 min ago</div></div></div>
+        <div class="activity-item"><div class="activity-dot" style="background:var(--cyan)"></div><div><div class="activity-text"><b>Riya Sharma</b> deployed a caching update</div><div class="activity-time">4 min ago</div></div></div>
+        <div class="activity-item"><div class="activity-dot" style="background:var(--amber)"></div><div><div class="activity-text"><b>Telemetry</b> flagged elevated p99 on payments-api</div><div class="activity-time">11 min ago</div></div></div>
+        <div class="activity-item"><div class="activity-dot" style="background:var(--green)"></div><div><div class="activity-text"><b>Arjun Mehta</b> completed a chaos experiment</div><div class="activity-time">28 min ago</div></div></div>
+        <div class="activity-item"><div class="activity-dot" style="background:var(--cyan)"></div><div><div class="activity-text"><b>Nikhil Rao</b> commented on your post</div><div class="activity-time">41 min ago</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="fab" id="fab" onclick="openComposer()">＋ CREATE POST</button>
+
+<div class="modal-overlay" id="composer-overlay">
+  <div class="modal">
+    <div class="modal-title">CREATE NEW POST</div>
+    <textarea placeholder="What's happening?"></textarea>
+    <div class="modal-tools">
+      <div class="tool-chip">📷 Add Image</div>
+      <div class="tool-chip">😊 Emoji</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeComposer()">Cancel</button>
+      <button class="btn-cta" onclick="submitPost()">POST ⚡</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function focusField(id){
+    document.getElementById(id).classList.add('focused');
+  }
+  const $ = (id)=>document.getElementById(id);
+
+  // ============================================================
+  // BACKEND INTEGRATION (NexaTweet API)
+  // Point this at your running backend by editing API_BASE below, or by
+  // setting window.NEXATWEET_API_BASE earlier in the page (in its own
+  // separate script tag, before this one) to override it without editing this file.
+  // Make sure that origin is listed in the backend's CORS_ORIGINS env var.
+  // ============================================================
+  const API_BASE = (window.NEXATWEET_API_BASE || 'http://localhost:4000').replace(/\/$/, '');
+  let AUTH_TOKEN = localStorage.getItem('nexatweet_token') || null;
+  let CURRENT_USER = JSON.parse(localStorage.getItem('nexatweet_user') || 'null');
+  let BACKEND_ONLINE = true; // flips false after a failed call, so we fall back to the built-in demo visuals
+
+  function setSession(token, user){
+    AUTH_TOKEN = token; CURRENT_USER = user;
+    if(token){ localStorage.setItem('nexatweet_token', token); localStorage.setItem('nexatweet_user', JSON.stringify(user)); }
+    else { localStorage.removeItem('nexatweet_token'); localStorage.removeItem('nexatweet_user'); }
+  }
+
+  // Thin fetch wrapper: adds base URL + auth header, throws with a readable message on failure.
+  async function api(path, opts = {}){
+    const headers = Object.assign({}, opts.headers || {});
+    if(opts.body && !(opts.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+    if(AUTH_TOKEN) headers['Authorization'] = 'Bearer ' + AUTH_TOKEN;
+    let res;
+    try{
+      res = await fetch(API_BASE + path, { ...opts, headers });
+    } catch(networkErr){
+      BACKEND_ONLINE = false;
+      throw new Error('Could not reach the NexaTweet API at ' + API_BASE + '. Is the backend running?');
+    }
+    BACKEND_ONLINE = true;
+    let data = null;
+    try{ data = await res.json(); } catch { /* e.g. 204 No Content */ }
+    if(!res.ok) throw new Error((data && data.error) || ('Request failed (' + res.status + ')'));
+    return data;
+  }
+
+  function timeAgo(iso){
+    const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime())/1000));
+    if(s < 60) return s+'s';
+    if(s < 3600) return Math.floor(s/60)+'m';
+    if(s < 86400) return Math.floor(s/3600)+'h';
+    return Math.floor(s/86400)+'d';
+  }
+  function initials(name){ return (name||'?').trim().charAt(0).toUpperCase() || '?'; }
+  function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  // ---- Feed: load real posts from the Social Platform service, keep demo posts as an offline fallback ----
+  function renderPost(post){
+    const author = post.author && post.author.username ? post.author : { username: 'you', displayName: CURRENT_USER?.username || 'You' };
+    const div = document.createElement('div');
+    div.className = 'post';
+    div.dataset.postId = post.id;
+    div.innerHTML = `
+      <div class="post-head"><div class="avatar" style="width:34px;height:34px;font-size:12px;">${initials(author.displayName||author.username)}</div>
+        <div><div class="post-name">${escapeHtml(author.displayName || author.username)}</div><div class="post-handle">@${escapeHtml(author.username)}</div></div>
+        <div class="post-time">${timeAgo(post.createdAt)}</div></div>
+      <div class="post-body">${escapeHtml(post.text)}</div>
+      <div class="post-actions" style="margin-top:12px;">
+        <span class="like-btn">❤️ ${post.likesCount||0}</span><span>💬 ${post.commentsCount||0}</span><span>🔁 0</span><span>🔖</span>
+      </div>`;
+    const likeEl = div.querySelector('.like-btn');
+    likeEl.addEventListener('click', () => toggleLike(likeEl, post.id));
+    return div;
+  }
+
+  async function toggleLike(el, postId){
+    const active = el.dataset.active === '1';
+    try{
+      const data = active
+        ? await api(`/api/social/posts/${postId}/like`, { method:'DELETE' })
+        : await api(`/api/social/posts/${postId}/like`, { method:'POST' });
+      el.dataset.active = data.liked ? '1' : '0';
+      el.textContent = '❤️ ' + (typeof data.likesCount === 'number' ? data.likesCount : (parseInt(el.textContent.split(' ')[1])||0));
+      el.style.color = data.liked ? 'var(--red)' : '';
+      el.style.fontWeight = data.liked ? '700' : '';
+    } catch(err){ console.error('[like]', err.message); }
+  }
+
+  async function loadFeed(){
+    const demo = $('demo-posts'), real = $('real-feed');
+    try{
+      const { posts } = await api('/api/social/feed');
+      demo.style.display = 'none';
+      real.innerHTML = '';
+      if(!posts.length){
+        real.innerHTML = '<div class="post" style="color:var(--text-2)">No posts yet — follow people or create the first one.</div>';
+      } else {
+        posts.forEach(p => real.appendChild(renderPost(p)));
+      }
+    } catch(err){
+      console.warn('[feed] falling back to demo posts:', err.message);
+      demo.style.display = ''; real.innerHTML = '';
+    }
+  }
+
+  // ---- Notifications ----
+  async function loadNotifications(){
+    const demo = $('demo-notifs'), real = $('real-notifs');
+    try{
+      const { notifications } = await api('/api/notifications');
+      demo.style.display = 'none';
+      const ICONS = { like:['❤️','var(--cyan-dim)','var(--cyan)'], comment:['💬','var(--card)','var(--text-2)'], follow:['🔁','var(--green-dim)','var(--green)'] };
+      real.innerHTML = notifications.length ? notifications.map(n=>{
+        const [ic,bg,fg] = ICONS[n.type] || ['🔔','var(--card)','var(--text-2)'];
+        return `<div class="notif-item ${n.read?'':'unread'}"><div class="notif-ic" style="background:${bg}; color:${fg};">${ic}</div>
+          <div><div class="notif-text"><b>Someone</b> ${escapeHtml(n.type)}d your activity</div><div class="notif-time">${timeAgo(n.createdAt)} ago</div></div></div>`;
+      }).join('') : '<div style="color:var(--text-2); padding:12px;">You’re all caught up.</div>';
+    } catch(err){
+      console.warn('[notifications] falling back to demo items:', err.message);
+      demo.style.display = '';
+    }
+  }
+
+  // ---- Telemetry / Health / Chaos (admin-only on the backend; silently no-ops for non-admin users) ----
+  const isAdmin = () => CURRENT_USER && CURRENT_USER.role === 'admin';
+
+  async function pollHealth(){
+    if(!isAdmin()) return null;
+    try{
+      const [health, metrics] = await Promise.all([api('/api/telemetry/health'), api('/api/telemetry/metrics')]);
+      return { health, metrics };
+    } catch(err){ return null; }
+  }
+
+  async function loadIncidents(){
+    const list = $('rca-list');
+    if(!isAdmin() || !list) return;
+    try{
+      const { incidents } = await api('/api/telemetry/incidents');
+      if(!incidents.length) return; // keep the illustrative demo entries
+      list.innerHTML = incidents.map(inc => `
+        <div class="rca-item" onclick="this.classList.toggle('open')">
+          <div class="rca-head"><span class="rca-sev" style="background:${inc.status==='resolved'?'var(--green)':'var(--red)'}"></span>
+            <span class="rca-title">${escapeHtml(inc.component)} — ${escapeHtml(inc.severity)}</span>
+            <span class="rca-time">${inc.status==='resolved' ? 'Resolved' : 'Open'} · ${timeAgo(inc.createdAt)} ago</span></div>
+          <div class="rca-body">${escapeHtml(inc.rca && inc.rca.cause || 'Analysis pending.')}
+            <div>${(inc.rca && inc.rca.suggestions || []).map(s=>`<span class="rca-chip">${escapeHtml(s)}</span>`).join('')}</div>
+          </div>
+        </div>`).join('');
+    } catch(err){ console.warn('[rca]', err.message); }
+  }
+
+  // Backend-aware chaos toggle. Falls back to the local visual simulation if the
+  // backend isn't reachable, the account isn't admin, or CHAOS_ENABLED isn't set server-side.
+  async function backendChaos(turnOn){
+    if(!isAdmin()) return false;
+    try{
+      if(turnOn) await api('/api/resilience/chaos', { method:'POST', body: JSON.stringify({ latencyMs:400, errorRate:0.3, durationSec:120 }) });
+      else await api('/api/resilience/chaos', { method:'DELETE' });
+      return true;
+    } catch(err){ console.warn('[chaos]', err.message); return false; }
+  }
+
+  async function initApp(){
+    await loadFeed();
+    await loadNotifications();
+    await loadIncidents();
+    if($('page-title') && CURRENT_USER){
+      const h1 = document.querySelector('#view-home .page-h');
+      if(h1) h1.textContent = 'Good to see you, ' + (CURRENT_USER.displayName || CURRENT_USER.username) + ' 👋';
+      const av = $('composer-avatar'); if(av) av.textContent = initials(CURRENT_USER.displayName || CURRENT_USER.username);
+    }
+  }
+
+  function isValid(kind, val){
+    if(kind==='email') return /\S+@\S+\.\S+/.test(val);
+    if(kind==='name') return val.length>=2;
+    return val.length>=6;
+  }
+  const FIELD_ERR = {
+    email:'Invalid email address',
+    name:'Please enter your name',
+    password:'Password must be at least 6 characters'
+  };
+  function showFieldState(shellId, input, val){
+    const shell = $(shellId);
+    const msg = $(shellId.replace('-shell','-msg'));
+    const kind = input.dataset.kind;
+    shell.classList.remove('invalid');
+    if(!val){ msg.className='field-msg'; msg.textContent=''; return true; }
+    if(isValid(kind,val)){
+      msg.className='field-msg show ok'; msg.innerHTML='🟢 Looks good'; return true;
+    }
+    msg.className='field-msg show err'; msg.innerHTML='🔴 '+FIELD_ERR[kind];
+    shell.classList.add('invalid');
+    setTimeout(()=>shell.classList.remove('invalid'), 350);
+    return false;
+  }
+  function blurField(id, input){
+    $(id).classList.remove('focused');
+    showFieldState(id, input, input.value.trim());
+  }
+
+  function togglePwd(inputId, btnId){
+    const input = $(inputId);
+    const btn = $(btnId);
+    const hidden = input.type === 'password';
+    input.type = hidden ? 'text' : 'password';
+    btn.textContent = hidden ? '👁\u200d🗨' : '👁';
+  }
+
+  // ---- dot-matrix background (canvas 2D, no external dependencies) ----
+  const DotBg = (function(){
+    const PITCH = 10, DOT = 3;                       // css px: grid spacing / dot size
+    const OPAC = [0.25,0.25,0.25,0.4,0.4,0.4,0.65,0.65,0.65,0.95];
+    const COLORS = ['63,209,224','63,209,224','244,246,250','76,141,255','63,209,224','124,109,242'];
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let cvs, ctx, W, H, cols, rows, offX, offY, cells, raf, t0, last = 0, active = true;
+
+    // deterministic per-cell hash in [0,1)
+    function rnd(x, y, salt){
+      let h = (x*374761393 + y*668265263 + salt*2147483647) | 0;
+      h = (h ^ (h >>> 13)) * 1274126177 | 0;
+      h = h ^ (h >>> 16);
+      return (h >>> 0) / 4294967296;
+    }
+
+    function layout(){
+      W = window.innerWidth; H = window.innerHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      cvs.width = Math.round(W*dpr); cvs.height = Math.round(H*dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      cols = Math.ceil(W/PITCH); rows = Math.ceil(H/PITCH);
+      offX = Math.abs(Math.floor(((W % PITCH) - DOT)/2));
+      offY = Math.abs(Math.floor(((H % PITCH) - DOT)/2));
+      cells = [];
+      const cx = cols/2, cy = rows/2;
+      for(let y=0; y<rows; y++){
+        for(let x=0; x<cols; x++){
+          const off = rnd(x,y,1);
+          cells.push({
+            x:x*PITCH+offX, y:y*PITCH+offY, off,
+            color: Math.floor(off*6),
+            appear: Math.hypot(x-cx, y-cy)*0.012 + rnd(x,y,2)*0.3   // ripple out from the centre
+          });
+        }
+      }
+    }
+
+    function draw(t){
+      ctx.clearRect(0,0,W,H);
+      const buckets = {};
+      for(let i=0; i<cells.length; i++){
+        const c = cells[i];
+        if(t < c.appear) continue;
+        const epoch = Math.floor(t/5 + c.off + 5);           // each cell re-rolls its brightness every ~5s
+        const lvl = Math.floor(rnd(c.x|0, c.y|0, epoch) * 10);
+        let a = OPAC[lvl];
+        const age = t - c.appear;
+        if(age < 0.35) a *= 0.4 + 1.2*(age/0.35);             // brief flash as the dot switches on
+        const key = c.color + '|' + a.toFixed(2);
+        (buckets[key] || (buckets[key] = [])).push(c);
+      }
+      for(const key in buckets){
+        const [ci, a] = key.split('|');
+        ctx.fillStyle = 'rgba('+COLORS[ci]+','+Math.min(1, +a)+')';
+        ctx.beginPath();
+        const list = buckets[key];
+        for(let i=0; i<list.length; i++) ctx.rect(list[i].x, list[i].y, DOT, DOT);
+        ctx.fill();
+      }
+    }
+
+    function frame(now){
+      if(!active) return;
+      raf = requestAnimationFrame(frame);
+      if(now - last < 40) return;                            // ~25fps is plenty for slow twinkle
+      last = now;
+      draw((performance.now() - t0)/1000);
+    }
+    function onResize(){ layout(); if(reduced) draw(100); }
+
+    function load(){
+      cvs = $('login-dots');
+      if(!cvs) return;
+      ctx = cvs.getContext('2d');
+      if(!ctx) return;
+      layout();
+      window.addEventListener('resize', onResize);
+      t0 = performance.now();
+      if(reduced) draw(100); else raf = requestAnimationFrame(frame);
+    }
+    function stop(){
+      active = false;
+      if(raf) cancelAnimationFrame(raf);
+      window.removeEventListener('resize', onResize);
+    }
+    return {load, stop};
+  })();
+  DotBg.load();
+
+  // ---- screen transitions ----
+  function transitionToApp(){
+    const lv = $('login-view'), bg = $('login-bg');
+    lv.style.transition = 'opacity .3s'; lv.style.opacity = '0';
+    bg.style.transition = 'opacity .3s'; bg.style.opacity = '0';
+    setTimeout(()=>{
+      lv.style.display = 'none';
+      bg.style.display = 'none';
+      DotBg.stop();
+      $('app-view').classList.add('active');
+    }, 300);
+  }
+  function enterDemo(){ if(!authBusy) transitionToApp(); }
+
+  // ---- auth flow (sign in / sign up / social) ----
+  let authBusy = false;
+  const AUTH = {
+    signin:{btn:'signin-btn', label:'signin-label', arrow:'signin-arrow', banner:'error-banner', idle:'SIGN IN',
+            done:'AUTHENTICATION SUCCESSFUL ✓', busy:'AUTHENTICATING',
+            fields:[['email-shell','email-input'],['pass-shell','pass-input']]},
+    signup:{btn:'signup-btn', label:'signup-label', arrow:'signup-arrow', banner:'su-error-banner', idle:'CREATE ACCOUNT',
+            done:'ACCOUNT CREATED ✓', busy:'CREATING ACCOUNT',
+            fields:[['name-shell','name-input'],['su-email-shell','su-email-input'],['su-pass-shell','su-pass-input']]}
+  };
+  const PULSES = ['pulse-1','pulse-2','pulse-3','pulse-4'];
+  function setCoreBusy(on){
+    $('core-sphere').classList.toggle('bright', on);
+    PULSES.forEach(id=>$(id).classList.toggle('accelerate', on));
+  }
+  function showAuthError(bannerId){
+    const card = $('login-card');
+    $(bannerId).classList.add('show');
+    card.classList.add('shake-card');
+    setTimeout(()=>card.classList.remove('shake-card'), 320);
+  }
+
+  function usernameFromEmail(email){
+    return (email.split('@')[0] || 'user').toLowerCase().replace(/[^a-z0-9_]/g,'').slice(0,16).padEnd(3,'0');
+  }
+
+  async function submitAuth(mode){
+    if(authBusy) return;
+    const c = AUTH[mode];
+    const btn = $(c.btn), label = $(c.label), arrow = $(c.arrow);
+    const inputs = c.fields.map(([shell,inp])=>[shell,$(inp)]);
+    const ok = inputs.every(([,el])=>isValid(el.dataset.kind, el.value.trim()));
+    $(c.banner).classList.remove('show');
+
+    authBusy = true;
+    btn.classList.add('loading');
+    arrow.style.display = 'none';
+    label.innerHTML = c.busy+' <span class="dot-loader"><span></span><span></span><span></span></span>';
+    setCoreBusy(true);
+
+    const finishInvalid = () => {
+      btn.classList.remove('loading'); setCoreBusy(false);
+      authBusy = false;
+      arrow.style.display = '';
+      label.textContent = c.idle;
+      inputs.forEach(([shell,el])=>{
+        const v = el.value.trim();
+        if(!v || !isValid(el.dataset.kind, v)){
+          const sh = $(shell); sh.classList.add('invalid');
+          setTimeout(()=>sh.classList.remove('invalid'), 350);
+        }
+        showFieldState(shell, el, v);
+      });
+      showAuthError(c.banner);
+    };
+    const finishError = (message) => {
+      btn.classList.remove('loading'); setCoreBusy(false);
+      authBusy = false;
+      arrow.style.display = '';
+      label.textContent = c.idle;
+      const banner = $(c.banner);
+      banner.textContent = '⚠ ' + message;
+      showAuthError(c.banner);
+    };
+    const finishSuccess = (token, user) => {
+      setSession(token, user);
+      btn.classList.remove('loading'); setCoreBusy(false);
+      btn.classList.add('success');
+      label.textContent = c.done;
+      setTimeout(() => { transitionToApp(); initApp(); }, 500);
+    };
+
+    if(!ok) return finishInvalid();
+
+    try{
+      if(mode === 'signin'){
+        const email = $('email-input').value.trim();
+        const password = $('pass-input').value;
+        const { token, user } = await api('/api/users/login', { method:'POST', body: JSON.stringify({ email, password }) });
+        finishSuccess(token, user);
+      } else {
+        const name = $('name-input').value.trim();
+        const email = $('su-email-input').value.trim();
+        const password = $('su-pass-input').value;
+        const username = usernameFromEmail(email) + Math.floor(Math.random()*90+10);
+        const { token, user } = await api('/api/users/register', { method:'POST', body: JSON.stringify({ username, email, password }) });
+        await api('/api/users/me', { method:'PATCH', body: JSON.stringify({ displayName: name }) }).catch(()=>{});
+        user.displayName = name;
+        finishSuccess(token, user);
+      }
+    } catch(err){
+      finishError(err.message || 'Authentication failed. Please check your credentials.');
+    }
+  }
+  function loginNow(){ submitAuth('signin'); }
+  function createAccount(){ submitAuth('signup'); }
+
+  // Restore a saved session on page load (skips the login screen if the token still works)
+  (async function tryResumeSession(){
+    if(!AUTH_TOKEN) return;
+    try{
+      const { user } = await api('/api/users/me');
+      setSession(AUTH_TOKEN, user);
+      transitionToApp();
+      initApp();
+    } catch { setSession(null, null); }
+  })();
+
+  function socialAuth(btn){
+    if(authBusy) return;
+    authBusy = true;
+    btn.classList.add('loading');
+    btn.querySelector('.s-label').innerHTML = '<span class="dot-loader"><span></span><span></span><span></span></span>';
+    setCoreBusy(true);
+    setTimeout(()=>{ setCoreBusy(false); setTimeout(transitionToApp, 250); }, 1000);
+  }
+
+  function switchMode(mode){
+    if(authBusy) return;
+    const panels = {signin:$('panel-signin'), signup:$('panel-signup')};
+    Object.keys(panels).forEach(k=>{ panels[k].hidden = (k!==mode); });
+    $('error-banner').classList.remove('show');
+    $('su-error-banner').classList.remove('show');
+    const p = panels[mode];
+    p.classList.remove('panel-in'); void p.offsetWidth; p.classList.add('panel-in');
+  }
+
+  // Enter key submits the visible form
+  [['panel-signin', loginNow], ['panel-signup', createAccount]].forEach(([panel, fn])=>{
+    $(panel).querySelectorAll('input:not([type=checkbox])').forEach(i=>{
+      i.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); fn(); } });
+    });
+  });
+
+  // ---- mouse parallax (desktop only) ----
+  if(window.matchMedia('(min-width:761px)').matches && window.matchMedia('(hover:hover)').matches){
+    document.getElementById('login-left').addEventListener('mousemove', (e)=>{
+      const rect = e.currentTarget.getBoundingClientRect();
+      const dx = (e.clientX - rect.left - rect.width/2) / rect.width;
+      const dy = (e.clientY - rect.top - rect.height/2) / rect.height;
+      const viz = document.getElementById('node-viz');
+      if(viz) viz.style.transform = `rotateY(${dx*6}deg) rotateX(${-dy*6}deg) translate(${dx*8}px, ${dy*8}px)`;
+      const card = document.getElementById('login-card');
+      if(card) card.style.transform = `translate(${dx*4}px, ${dy*4}px)`;
+    });
+    document.getElementById('login-left').addEventListener('mouseleave', ()=>{
+      const viz = document.getElementById('node-viz');
+      if(viz) viz.style.transform = '';
+      const card = document.getElementById('login-card');
+      if(card) card.style.transform = '';
+    });
+  }
+
+  function toggleSidebar(){
+    document.getElementById('sidebar').classList.toggle('collapsed');
+  }
+
+  document.querySelectorAll('.nav-item').forEach(item=>{
+    item.addEventListener('click', ()=>{
+      document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+      item.classList.add('active');
+      const v = item.dataset.view;
+      document.querySelectorAll('.view').forEach(vw=>vw.classList.remove('active'));
+      document.getElementById('view-'+v).classList.add('active');
+      document.getElementById('page-title').textContent = item.querySelector('.label-text').textContent;
+      document.getElementById('fab').style.display = (v==='home') ? 'flex' : 'none';
+      if(v==='notifications'){ loadNotifications().then(markAllRead); }
+      if(v==='rca') loadIncidents();
+    });
+  });
+
+  // ---- Explore: follow toggle ----
+  function toggleFollow(btn){
+    const following = btn.classList.toggle('following');
+    btn.textContent = following ? 'Following' : 'Follow';
+  }
+
+  // ---- Notifications ----
+  function markAllRead(){
+    document.querySelectorAll('.notif-item.unread').forEach(n=>n.classList.remove('unread'));
+    const badge = document.querySelector('.nav-item[data-view="notifications"] .badge');
+    if(badge) badge.remove();
+    if(AUTH_TOKEN) api('/api/notifications/read-all', { method:'POST' }).catch(()=>{});
+  }
+
+  // ---- Messages ----
+  const demoReplies = ["Got it, thanks!","Looking into it now.","Sounds good on my end.","Nice, that'll help a lot.","Will check and update the thread."];
+  function sendMsg(){
+    const input = document.getElementById('msg-input');
+    const text = input.value.trim();
+    if(!text) return;
+    const body = document.getElementById('msg-body');
+    const out = document.createElement('div');
+    out.className='bubble out'; out.textContent=text;
+    body.appendChild(out);
+    input.value='';
+    body.scrollTop = body.scrollHeight;
+    setTimeout(()=>{
+      const inB = document.createElement('div');
+      inB.className='bubble in';
+      inB.textContent = demoReplies[Math.floor(Math.random()*demoReplies.length)];
+      body.appendChild(inB);
+      body.scrollTop = body.scrollHeight;
+    }, 900);
+  }
+  document.querySelectorAll('.msg-thread-row').forEach(row=>{
+    row.addEventListener('click', ()=>{
+      document.querySelectorAll('.msg-thread-row').forEach(r=>r.classList.remove('active'));
+      row.classList.add('active');
+      document.querySelector('.msg-header').textContent = row.querySelector('.msg-thread-name').textContent;
+    });
+  });
+
+  // ---- Telemetry: live log stream ----
+  const logLevels = [
+    ['info','gateway','200 OK  GET /api/feed  38ms'],
+    ['info','auth-service','200 OK  POST /api/session  22ms'],
+    ['warn','payments-api','p99 latency crossed 250ms threshold'],
+    ['info','media-store','uploaded object media/9f21ac.png  61ms'],
+    ['info','search-index','query executed  14 results  9ms'],
+    ['err','primary-db','connection pool saturated, queuing request'],
+    ['info','notif-svc','delivered 128 push notifications'],
+  ];
+  function pushLog(){
+    const term = document.getElementById('log-term');
+    if(!term) return;
+    const pick = logLevels[Math.floor(Math.random()*logLevels.length)];
+    const [lvl, svc, msg] = pick;
+    const time = new Date().toLocaleTimeString();
+    const line = document.createElement('div');
+    line.innerHTML = `<span style="color:var(--text-3)">[${time}]</span> <span class="lvl-${lvl}">${lvl.toUpperCase()}</span> <b style="color:#fff">${svc}</b> — ${msg}`;
+    term.appendChild(line);
+    while(term.children.length > 40) term.removeChild(term.firstChild);
+    term.scrollTop = term.scrollHeight;
+  }
+  for(let i=0;i<10;i++) pushLog();
+  setInterval(pushLog, 2200);
+
+  // ---- Post interactions: like / repost / save ----
+  document.querySelectorAll('.post-actions').forEach(row=>{
+    const spans = row.querySelectorAll('span');
+    if(spans[0]) spans[0].addEventListener('click', ()=>toggleAction(spans[0], '❤️', 'var(--red)'));
+    if(spans[2]) spans[2].addEventListener('click', ()=>toggleAction(spans[2], '🔁', 'var(--green)'));
+    if(spans[3]) spans[3].addEventListener('click', (e)=>{ e.target.style.color = e.target.style.color ? '' : 'var(--cyan)'; });
+  });
+  function toggleAction(el, icon, color){
+    const active = el.dataset.active === '1';
+    const parts = el.textContent.trim().split(' ');
+    let count = parseInt(parts[1]) || 0;
+    count += active ? -1 : 1;
+    el.dataset.active = active ? '0' : '1';
+    el.textContent = icon+' '+count;
+    el.style.color = active ? '' : color;
+    el.style.fontWeight = active ? '' : '700';
+  }
+
+  // ---- Composer: post to feed ----
+  async function submitPost(){
+    const ta = document.querySelector('#composer-overlay textarea');
+    const text = ta.value.trim();
+    if(!text){ closeComposer(); return; }
+
+    if(AUTH_TOKEN){
+      // Real session: create the post on the backend and prepend it to the real feed.
+      try{
+        const { post } = await api('/api/social/posts', { method:'POST', body: JSON.stringify({ text }) });
+        $('demo-posts').style.display = 'none';
+        const real = $('real-feed');
+        real.insertBefore(renderPost({ ...post, author: CURRENT_USER }), real.firstChild);
+        ta.value = '';
+      } catch(err){
+        alert('Could not post: ' + err.message);
+      }
+      closeComposer();
+      return;
+    }
+
+    // Demo mode (no backend session): keep the original local-only behaviour.
+    const feed = $('demo-posts');
+    const post = document.createElement('div');
+    post.className='post';
+    post.innerHTML = `<div class="post-head"><div class="avatar" style="width:34px;height:34px;font-size:12px;">S</div><div><div class="post-name">Sai</div><div class="post-handle">@sai.dev</div></div><div class="post-time">now</div></div>
+      <div class="post-body">${text.replace(/</g,'&lt;')}</div>
+      <div class="post-actions" style="margin-top:12px;"><span>❤️ 0</span><span>💬 0</span><span>🔁 0</span><span>🔖</span></div>`;
+    feed.insertBefore(post, feed.firstChild);
+    const spans = post.querySelectorAll('.post-actions span');
+    spans[0].addEventListener('click', ()=>toggleAction(spans[0], '❤️', 'var(--red)'));
+    spans[2].addEventListener('click', ()=>toggleAction(spans[2], '🔁', 'var(--green)'));
+    spans[3].addEventListener('click', (e)=>{ e.target.style.color = e.target.style.color ? '' : 'var(--cyan)'; });
+    ta.value='';
+    closeComposer();
+  }
+
+  // ---- Settings: reduced motion ----
+  let reducedMotion = false;
+  function toggleReducedMotion(btn){ reducedMotion = btn.classList.contains('on'); }
+
+  function openComposer(){ document.getElementById('composer-overlay').classList.add('active'); }
+  function closeComposer(){ document.getElementById('composer-overlay').classList.remove('active'); }
+
+  // ---- live-ish metrics ----
+  let cpu=42, mem=61, lat=124, err=0.8, chaosActive=false;
+  let cpuHist=[42,40,44,41,43,42,45,42], memHist=[61,60,62,61,63,61,60,61], latHist=[124,120,128,122,126,124,130,124];
+
+  function walk(v, min, max, step){
+    v += (Math.random()-0.5)*step;
+    return Math.max(min, Math.min(max, v));
+  }
+  function toPath(hist, height){
+    const w=400, n=hist.length;
+    const max=Math.max(...hist)*1.15, min=Math.min(...hist)*0.85;
+    return hist.map((v,i)=>{
+      const x = (i/(n-1))*w;
+      const y = height - ((v-min)/(max-min||1))*height;
+      return (i===0?'M':'L')+x.toFixed(1)+','+y.toFixed(1);
+    }).join(' ');
+  }
+
+  function tick(){
+    if(chaosActive){
+      lat = walk(lat, 250, 620, 60);
+      err = walk(err, 12, 22, 3);
+      cpu = walk(cpu, 70, 95, 6);
+      mem = walk(mem, 75, 92, 4);
+    } else {
+      cpu = walk(cpu, 30, 55, 4);
+      mem = walk(mem, 50, 70, 3);
+      lat = walk(lat, 100, 150, 8);
+      err = walk(err, 0.3, 1.2, 0.2);
+    }
+    cpuHist.push(cpu); if(cpuHist.length>24) cpuHist.shift();
+    memHist.push(mem); if(memHist.length>24) memHist.shift();
+    latHist.push(lat); if(latHist.length>24) latHist.shift();
+
+    const cpuR = Math.round(cpu), memR = Math.round(mem), latR = Math.round(lat), errR = err.toFixed(1);
+
+    document.getElementById('top-cpu').textContent = 'CPU '+cpuR+'%';
+    document.getElementById('top-mem').textContent = 'MEMORY '+memR+'%';
+
+    document.getElementById('home-bar-cpu').style.width = cpuR+'%';
+    document.getElementById('home-val-cpu').textContent = cpuR+'%';
+    document.getElementById('home-bar-mem').style.width = memR+'%';
+    document.getElementById('home-val-mem').textContent = memR+'%';
+
+    document.getElementById('hc-cpu').textContent = cpuR+'%';
+    document.getElementById('hc-mem').textContent = memR+'%';
+    document.getElementById('hc-lat').textContent = latR+' ms';
+    document.getElementById('hc-err').textContent = errR+'%';
+
+    document.getElementById('cpu-current').textContent = cpuR+'%';
+    document.getElementById('mem-current').textContent = memR+'%';
+    document.getElementById('lat-current').textContent = latR+' ms';
+
+    document.getElementById('spark-cpu').setAttribute('d', toPath(cpuHist,70));
+    document.getElementById('spark-mem').setAttribute('d', toPath(memHist,70));
+    document.getElementById('spark-lat').setAttribute('d', toPath(latHist,70));
+
+    if(chaosActive){
+      document.getElementById('top-sys-status').innerHTML = '<span class="dot"></span> INCIDENT ACTIVE';
+      document.getElementById('top-sys-status').classList.add('incident');
+      document.getElementById('top-nexora').textContent = 'DATABASE LATENCY HIGH';
+      document.getElementById('top-cpu').textContent = 'ERROR RATE '+errR+'%';
+      document.getElementById('top-mem').textContent = 'NEXORA RCA RUNNING';
+      document.getElementById('health-hero').classList.add('incident');
+      document.getElementById('health-hero-title').textContent = '🔴 DEGRADED';
+      document.getElementById('health-hero-big').textContent = (99.8 - err).toFixed(1)+'%';
+      document.getElementById('hc-db').textContent='DEGRADED';
+      document.getElementById('hc-db').style.color='var(--red)';
+    } else {
+      document.getElementById('top-sys-status').innerHTML = '<span class="dot"></span> SYSTEM OPERATIONAL';
+      document.getElementById('top-sys-status').classList.remove('incident');
+      document.getElementById('top-nexora').textContent = 'NEXORA CONNECTED';
+      document.getElementById('top-db').textContent = 'DB CONNECTED';
+      document.getElementById('top-api').textContent = 'API 99.8%';
+      document.getElementById('health-hero').classList.remove('incident');
+      document.getElementById('health-hero-title').textContent = '🟢 HEALTHY';
+      document.getElementById('health-hero-big').textContent = '99.8%';
+      document.getElementById('hc-db').textContent='CONNECTED';
+      document.getElementById('hc-db').style.color='var(--green)';
+    }
+  }
+  setInterval(tick, 1800);
+
+  // Admin sessions: overlay real numbers from the Telemetry/Health engines on top of the
+  // simulated dashboard above (CPU/MEM stay simulated — the backend doesn't track host metrics).
+  async function pollRealTelemetry(){
+    const result = await pollHealth();
+    if(!result) return;
+    const { health, metrics } = result;
+    const dbStatus = health.components.mongo?.status;
+    if(dbStatus){
+      const el = $('hc-db');
+      if(el){ el.textContent = dbStatus.toUpperCase(); el.style.color = dbStatus==='healthy' ? 'var(--green)' : dbStatus==='degraded' ? 'var(--amber)' : 'var(--red)'; }
+      const topDb = $('top-db'); if(topDb) topDb.textContent = 'DB ' + dbStatus.toUpperCase();
+    }
+    if(typeof metrics.p95 === 'number'){
+      const latEl = $('hc-lat'); if(latEl) latEl.textContent = Math.round(metrics.p95) + ' ms';
+    }
+    if(metrics.requests){
+      const errRate = metrics.requests ? (metrics.errors/metrics.requests*100) : 0;
+      const errEl = $('hc-err'); if(errEl) errEl.textContent = errRate.toFixed(1) + '%';
+    }
+  }
+  setInterval(pollRealTelemetry, 10000);
+
+  let hb=4;
+  setInterval(()=>{ hb++; document.getElementById('heartbeat').textContent='Last heartbeat: '+hb+' sec ago'; if(hb>=9){hb=0;} }, 1000);
+
+  async function toggleChaos(){
+    chaosActive = !chaosActive;
+    document.getElementById('chaos-switch').classList.toggle('on', chaosActive);
+    const log = document.getElementById('chaos-log');
+    const time = new Date().toLocaleTimeString();
+    const rcaLive = document.getElementById('rca-live');
+    const topoDb = document.getElementById('topo-db');
+
+    // Try the real resilience layer first (admin session + CHAOS_ENABLED=true on the backend).
+    const wentLive = await backendChaos(chaosActive);
+
+    if(chaosActive){
+      log.innerHTML = `[${time}] Injecting latency fault on primary-db${wentLive?' (live via /api/resilience/chaos)':''}...<br>[${time}] Cascade detected on payments-api, auth-service<br>[${time}] NEXORA RCA engine analyzing dependency graph...`;
+      if(rcaLive) rcaLive.style.display='block';
+      if(topoDb) topoDb.setAttribute('stroke', '#F0555A');
+    } else {
+      log.innerHTML = `[${time}] Fault removed. Services recovering.<br>[${time}] NEXORA confirms nominal baseline restored.`;
+      if(rcaLive) rcaLive.style.display='none';
+      if(topoDb) topoDb.setAttribute('stroke', '#3ECF8E');
+    }
+    tick();
+    if(wentLive) setTimeout(loadIncidents, 1500);
+  }
+</script>
+</body>
+</html>
